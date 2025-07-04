@@ -37,7 +37,7 @@ bpmn_modeling_service = BpmnModelingService()
 bpmn_xml_generator = BpmnXmlGenerator()
 
 
-@app.post("/bpmn_to_json")
+@app.post("/bpmn_to_json") #might not need this
 @handle_exceptions
 async def _bpmn_to_json(request: BpmnToJsonRequest) -> JSONResponse:
     """
@@ -94,7 +94,7 @@ async def _modify(request: ModifyBpmnRequest) -> JSONResponse:
     return JSONResponse(content={"bpmn_xml": bpmn_xml_string, "bpmn_json": process})
 
 
-@app.post("/talk")
+'''@app.post("/talk")
 async def _talk(request: ConversationalRequest) -> StreamingResponse:
     model = replace_reasoning_model(request.model)
     conversational_service = ConversationalService(model)
@@ -108,4 +108,31 @@ async def _talk(request: ConversationalRequest) -> StreamingResponse:
             request.message_history, request.process
         )
 
-    return StreamingResponse(response_generator)
+    return StreamingResponse(response_generator)'''
+
+@app.post("/talk")
+@handle_exceptions
+async def _talk(request: ConversationalRequest) -> JSONResponse:
+    model = replace_reasoning_model(request.model)
+    conversational_service = ConversationalService(model)
+
+    if request.needs_to_be_final_comment:
+        message = await conversational_service.make_final_comment_as_text(
+            request.message_history, request.process
+        )
+    else:
+        message = await conversational_service.respond_to_query_as_text(
+            request.message_history, request.process
+        )
+
+    return JSONResponse(content={"message": message})
+'''
+@app.get("/current_bpmn_xml")
+@handle_exceptions
+#from DiagramHandler.AdjustedBPMNData
+
+@app.post("/suggest_security")
+@handle_exceptions
+
+@app.post("/modify_security")
+@handle_exceptions'''

@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+    <bpmnElement elementID="lane6" elementText="Yard">
+
+        <accesscontrol required="true">
+
+            <authentication required="true">
+                <persauthentication required="true">
+                    <credentials required="true" usernameRequired="true" passwordRequired="true" pinRequired="true" passwordChangePeriod="0" />
+                    <smartcard required="true" contactless="true" pinRequired_SC="true" />
+                    <biometric required="true" biometricType="N/A" />
+                </persauthentication>
+                <networkauthentication required="true">
+                    <cryptprotocol required="true" protocol="N/A" />
+                    <vpn required="true" />
+                </networkauthentication>
+            </authentication>
+
+            
+
+            <identification required="true">
+                <trustlevel required="true" minimumLevel="0" />
+            </identification>
+
+            
+
+            <authorisation required="true">
+                <assetclassification required="true">
+                    <serviceclassification required="true" serviceLevel="0" />
+                    <dataclassification required="true" dataLevel="0" />
+                </assetclassification>
+                <statetransition required="true">
+                    <bibamodel required="true" />
+                    <belllapadula required="true" />
+                </statetransition>
+            </authorisation>
+            
+        </accesscontrol>
+            
+        <privacy required="true">
+            <userconsent required="true" onceOnly="true" everyTime="true">
+                <anonymity required="true" compulsoryAnonymity="true">
+                    <pseudonymity required="true" compulsoryPseudonymity="true" />
+                </anonymity>
+                <datausage required="true" onceOnlyDataUsage="true" everyTimeDataUsage="true" />
+            </userconsent>
+
+            <confidentiality required="true">
+                <needtoknow required="true" />
+                <encryption required="true" keyType="N/A" size="0" />
+                <dataretention required="true" minimumRetention="0" maximumRetention="0" />
+                <pki required="true" />
+            </confidentiality>
+        </privacy>
+
+            
+        <integrity required="true">
+            <dataintegrity required="true">
+                <hashfunction required="true" />
+                <constraints required="true">
+                    <inputvalidation required="true" date="true" numbersOnly="true" textOnly="true" noNumbers="true" noText="true" noSymbols="true" />
+                </constraints>
+            </dataintegrity>
+            <hardwareintegrity required="true">
+                <physicalsecurity required="true">
+                    <personnel required="true" personnelRequired="0" />
+                    <location required="true" barriers="true" videoSurveillance="true" alarm="true" lighting="true" />
+                </physicalsecurity>
+                <assetmanagement required="true">
+                    <assetmaintenance required="true" maintenanceInterval="0" />
+                    <assetregister required="true" description="true" serialNumber="true" purchaseDate="true" purchasePrice="true" checkoutDate="true" lifespan="true" />
+                </assetmanagement>
+            </hardwareintegrity>
+            <personnelintegrity required="true">
+                <roleassignment required="true">
+                    <bindingofduty required="true" binding1="N/A" binding2="N/A" binding3="N/A" binding4="N/A" binding5="N/A" binding1ID="N/A" binding2ID="N/A" binding3ID="N/A" binding4ID="N/A" binding5ID="N/A" />
+                    <separationofduty required="true" minimumEntities="0" thisTaskOnly="true" separation1="N/A" separation2="N/A" separation3="N/A" separation4="N/A" separation5="N/A" separation1ID="N/A" separation2ID="N/A" separation3ID="N/A" separation4ID="N/A" separation5ID="N/A" />
+                </roleassignment>
+                <delegation required="true" forbidden="true" />
+            </personnelintegrity>
+            <softwareintegrity required="true">
+                <immunity required="true" scanInterval="0" />
+                <patchmanagement required="true" patchScanInterval="0" patchInstallTime="0000" />
+                <sandbox required="true" />
+            </softwareintegrity>
+        </integrity>
+        <accountability required="true">
+            <nonrepudiation required="true">
+                <digitalsignature required="true" />
+            </nonrepudiation>
+            <audittrail required="true" userID="true" timeStamp="true" affectedEntity="true" read="true" write="true" modify="true" />
+        </accountability>
+        <attackharm required="true">
+            <vulnerabilityassessment required="true">
+                <systemassessment required="true" systemInterval="0" />
+                <environmentassessment required="true" environmentInterval="0" />
+                <serviceassessment required="true" serviceInterval="0" />
+                <personnelassessment required="true" personnelInterval="0" />
+            </vulnerabilityassessment>
+            <honeypot required="true">
+                <high-interaction required="true" />
+                <low-interaction required="true" />
+            </honeypot>
+            <firewall required="true">
+                <networklayer required="true" />
+                <applicationlayer required="true" />
+            </firewall>
+            <intrusiondetection required="true">
+                <statefulprotocol required="true" />
+                <signaturebased required="true" />
+                <anomalydetection required="true" />
+            </intrusiondetection>
+        </attackharm>
+            
+        <availability required="true" percentage="0" monthlyDowntime="0">
+            <databackup required="true" minimumDataBackups="0" backupFrequency="0">
+                <localbackup required="true" minimumLocalBackups="0" />
+                <onlinebackup required="true" minimumOnlineBackups="0" />
+            </databackup>
+            <servicebackup required="true" minimumServiceBackups="0" />
+            <personnelbackup required="true" minimumPersonnelBackups="0" />
+            <hardwarebackup required="true" minimumHardwareBackups="0" />
+        </availability>
+            
+    </bpmnElement>
+</root>

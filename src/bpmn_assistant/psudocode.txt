@@ -1,0 +1,23 @@
+C# unity
+Scene "Build" 
+
+prompt in the box 
+/determine_intent -> /suggest_security
+                  -> /talk
+                  -> /modify_security
+
+/suggest_security
+- send current modified bpmn xml to server from unity client DiagramHandler.AdjustedBPMNData
+- find the template with availalbe security ontologies (availalbe_xml_tags.py)
+- make LLM aware of available ontologies, providing both modified bpmn xml and available ontologies
+- give suggestion based on data provided.
+- ask user for confimation to modify
+- create func extract() element types, count more than one elementID and elementText exsists
+- when user confirms, logs elemntIDs, elementTexts and ontogolies to set true and their numbers
+
+
+/modify_security (upon confimation)
+
+- accoding to that number, create exact number of loops within <root> tag using template
+- read logs and edit the modified_template
+- POST to client
