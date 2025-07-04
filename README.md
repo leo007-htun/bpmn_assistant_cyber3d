@@ -4,7 +4,17 @@ BPMN Assistant is an application that uses Large Language Models (LLMs) to assis
 interpreting Business Process Model and Notation (BPMN) diagrams.
 
 ## Quickstart
+Repo Image is alrady pushed to docker hub, pull the docker iamge and run or if you want to configure source code is below
 
+```
+docker pull sithuyehtun/bpmn_assistant:v1
+```
+deploy in your localhost or on server
+```
+docker run -p 8000:8000 sithuyehtun/bpmn_assistant:v1
+```
+
+Only if you want to configure
 1. Clone the repository
 
 ```
@@ -45,15 +55,19 @@ copy .env.example .env
 
 3. Open the `.env` file and replace the placeholder values with your actual API keys.
 
-4. Build and run the application
+4. Build the application
 
 ```
-docker-compose up --build
+docker-compose build
 ```
 
-5. Open your browser and go to `http://localhost:8080`
+5. Opetional - Push to docker hub
 
-![Screenshot](images/screenshot_1.png)
+```
+docker-compose push
+```
+
+
 
 ## Prerequisites
 
