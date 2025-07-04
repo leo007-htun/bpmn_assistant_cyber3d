@@ -6,7 +6,7 @@ interpreting Business Process Model and Notation (BPMN) diagrams.
 You can choose Quickstart, manual Configuration or Run Manually, Dont need to do all three.
 
 ## Quickstart
-Repo Image is alrady pushed to docker hub, pull the docker iamge and run or if you want to configure source code is below
+Repo Image is already pushed to docker hub, pull the docker image and run or if you want to configure, follow other steps
 
 ```
 docker pull sithuyehtun/bpmn_assistant:v1
