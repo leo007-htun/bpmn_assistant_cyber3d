@@ -1,5 +1,7 @@
 ![Logo](images/cyber3d.png)
 
+THIS IS SERVER SIDE DEPLOYEMNT FOR BPMN ASSISTANT 
+
 BPMN Assistant is an application that uses Large Language Models (LLMs) to assist with creating, editing, and
 interpreting Business Process Model and Notation (BPMN) diagrams.
 
