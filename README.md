@@ -8,11 +8,11 @@ interpreting Business Process Model and Notation (BPMN) diagrams.
 1. Clone the repository
 
 ```
-git clone https://github.com/jtlicardo/bpmn-assistant.git
+https://github.com/leo007-htun/bpmn_assistant_cyber3d.git
 ```
 
 ```
-cd bpmn-assistant
+cd bpmn_assistant_cyber3d
 ```
 
 2. Set up your environment variables
