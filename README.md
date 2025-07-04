@@ -13,8 +13,71 @@ deploy in your localhost or on server
 ```
 docker run -p 8000:8000 sithuyehtun/bpmn_assistant:v1
 ```
+##Manual Configuration 
+1. Clone the repository
 
-Only if you want to configure
+```
+https://github.com/leo007-htun/bpmn_assistant_cyber3d.git
+```
+
+```
+cd bpmn_assistant_cyber3d
+```
+
+2. Set up your environment variables
+
+<details>
+<summary>Linux, macOS</summary>
+
+```
+cd src/bpmn_assistant
+```
+
+```
+cp .env.example .env
+```
+
+</details>
+
+<details>
+<summary>Windows</summary>
+
+```
+cd src\bpmn_assistant
+```
+
+```
+copy .env.example .env
+```
+
+</details>
+
+3. Open the `.env` file and replace the placeholder values with your actual API keys.
+
+4. edit the docker-compose.yaml file with any name or change version tag
+```
+  image: sithuyehtun/bpmn_assistant:v1
+```
+5. login to docker
+```
+docker login
+```
+6. Build the application
+
+```
+docker-compose build
+```
+7. Push to Docker hub
+```
+docker-compose push
+```
+8. use docker run to deploy
+```
+docker run -p 8000:8000 YOUR_REPO:TAG
+```
+
+
+##Run Manually
 1. Clone the repository
 
 ```
@@ -58,16 +121,9 @@ copy .env.example .env
 4. Build the application
 
 ```
-docker-compose build
+docker-compose up --build
 ```
-
-5. Opetional - Push to docker hub
-
-```
-docker-compose push
-```
-
-
+5. Open your browser and go to `http://localhost:8080`
 
 ## Prerequisites
 
