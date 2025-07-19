@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: ./src/bpmn_assistant/Dockerfile
-    image: sithuyehtun/bpmn_assistant:v1
+    image: sithuyehtun/bpmn_assistant:latest
     ports:
         - "8000:8000"
     env_file:
