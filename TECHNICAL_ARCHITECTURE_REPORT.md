@@ -1,1402 +1,2119 @@
-# CyberD3sign: Comprehensive Technical Architecture Report
+# CyberD3sign Application
+## Complete Technical Architecture Report
 
-**Document Version:** 1.0
-**Date:** 2025-10-16
-**Prepared For:** Technical Documentation & System Understanding
+---
+
+**Document Control**
+
+| Property | Value |
+|----------|-------|
+| **Document Title** | CyberD3sign Complete Technical Architecture Report |
+| **Version** | 2.0 |
+| **Date** | October 16, 2025 |
+| **Status** | Final |
+| **Author** | Sithu Ye Htun|
+| **Classification** | Technical Reference |
 
 ---
 
 ## Executive Summary
 
-CyberD3sign is a sophisticated hybrid application that combines 3D visualization (Unity) with AI-powered business process modeling and security analysis. The system consists of three main architectural layers:
+CyberD3sign is a sophisticated hybrid application that combines Unity 3D visualization with AI-powered business process modeling and security analysis. The system employs a three-tier architecture with a Unity C# frontend and dual-server backend infrastructure.
 
-1. **Frontend Layer:** Unity 2020.2.1f1 3D BPMN editor with interactive visualization
-2. **AI Backend Layer:** Python FastAPI server with multi-LLM integration for intelligent BPMN assistance
-3. **Database Layer:** IONOS-hosted PHP backend for user authentication and persistent data storage
+**Core Technologies:**
+- **Frontend**: Unity 2020.2.1f1 with C# .NET 4.x scripting
+- **Backend (Dual-Server Architecture)**:
+  - **Server 1 - cyberd3sign.com**: PHP backend, MySQL database, user authentication, web hosting
+  - **Server 2 - IONOS Cloud (217.154.116.117:8000)**: FastAPI LLM backend with stored API keys (no GPU costs)
+- **AI Integration**: Multi-provider LLM support via server-side API keys (OpenAI GPT, Anthropic Claude, Google Gemini, Fireworks AI)
 
-This report provides a detailed technical analysis of the system architecture, component interactions, data flows, and integration patterns.
+**Key Capabilities:**
+- AI-powered BPMN diagram generation and modification
+- Intent-based conversational interface for diagram creation
+- Security ontology mapping with 6-category framework
+- LLM-generated diagram rendering with automatic scaling
+- Real-time security analysis and recommendations
 
 ---
 
 ## Table of Contents
 
-1. [System Architecture Overview](#1-system-architecture-overview)
-2. [Frontend Architecture (Unity)](#2-frontend-architecture-unity)
-3. [Backend Architecture (FastAPI + IONOS)](#3-backend-architecture-fastapi--ionos)
-4. [Function Call Chains](#4-function-call-chains)
-5. [Data Flow Analysis](#5-data-flow-analysis)
-6. [LLM Integration Pipeline](#6-llm-integration-pipeline)
-7. [Security Framework](#7-security-framework)
-8. [Network Communication](#8-network-communication)
-9. [Critical Code Paths](#9-critical-code-paths)
-10. [Deployment Architecture](#10-deployment-architecture)
+1. [Introduction and System Overview](#1-introduction-and-system-overview)
+   - 1.1 [Purpose and Scope](#11-purpose-and-scope)
+   - 1.2 [System Context](#12-system-context)
+   - 1.3 [Key Features](#13-key-features)
+
+2. [System Architecture](#2-system-architecture)
+   - 2.1 [High-Level Architecture](#21-high-level-architecture)
+   - 2.2 [Component Diagram](#22-component-diagram)
+   - 2.3 [Technology Stack](#23-technology-stack)
+   - 2.4 [Design Patterns](#24-design-patterns)
+
+3. [AI-Powered LLM Integration Layer](#3-ai-powered-llm-integration-layer)
+   - 3.1 [GPTManager Component](#31-gptmanager-component)
+   - 3.2 [Intent Detection System](#32-intent-detection-system)
+   - 3.3 [Conversation Management](#33-conversation-management)
+   - 3.4 [API Integration Architecture](#34-api-integration-architecture)
+
+4. [Diagram Loading and Rendering System](#4-diagram-loading-and-rendering-system)
+   - 4.1 [loadBPMNDiagram Component](#41-loadbpmndiagram-component)
+   - 4.2 [loadLLMDiagram Component](#42-loadllmdiagram-component)
+   - 4.3 [XML Processing Pipeline](#43-xml-processing-pipeline)
+   - 4.4 [Dynamic Prefab Instantiation](#44-dynamic-prefab-instantiation)
+
+5. [Unity Frontend Layer](#5-unity-frontend-layer)
+   - 5.1 [DiagramHandler](#51-diagramhandler)
+   - 5.2 [SaveHandler](#52-savehandler)
+   - 5.3 [Login System](#53-login-system)
+   - 5.4 [Security Analysis and Visualization](#54-security-analysis-and-visualization)
+
+6. [Python FastAPI Backend (IONOS Cloud)](#6-python-fastapi-backend-ionos-cloud-server)
+   - 6.1 [Backend Architecture Overview](#61-backend-architecture-overview)
+   - 6.2 [BPMN Generation: How It Actually Works](#62-bpmn-generation-how-it-actually-works)
+   - 6.3 [Security Analysis: How It Actually Works](#63-security-analysis-how-it-actually-works)
+   - 6.4 [API Endpoints](#64-api-endpoints)
+   - 6.5 [LLM Facade Pattern](#65-llm-facade-pattern)
+   - 6.6 [BPMN Modeling Service](#66-bpmn-modeling-service)
+   - 6.7 [Request/Response Models](#67-requestresponse-models)
+
+7. [cyberd3sign.com PHP Backend](#7-cyberd3signcom-php-backend)
+   - 7.1 [Server Architecture](#71-server-architecture)
+   - 7.2 [Database Integration](#72-database-integration)
+   - 7.3 [Data Persistence](#73-data-persistence)
+
+8. [Security Framework](#8-security-framework)
+   - 8.1 [Security Ontology](#81-security-ontology)
+   - 8.2 [AI-Powered Security Suggestions](#82-ai-powered-security-suggestions)
+   - 8.3 [Security XML Generation](#83-security-xml-generation)
+
+9. [Data Flow and Integration](#9-data-flow-and-integration)
+   - 9.1 [User Authentication Flow](#91-user-authentication-flow)
+   - 9.2 [Diagram Creation Flow](#92-diagram-creation-flow)
+   - 9.3 [LLM-Powered Diagram Generation Flow](#93-llm-powered-diagram-generation-flow)
+   - 9.4 [Security Analysis Flow](#94-security-analysis-flow)
+
+10. [Technical Implementation Details](#10-technical-implementation-details)
+    - 10.1 [Coroutine-Based Async Operations](#101-coroutine-based-async-operations)
+    - 10.2 [XML Document Processing](#102-xml-document-processing)
+    - 10.3 [Scaling and Layout Algorithms](#103-scaling-and-layout-algorithms)
+
+11. [Deployment and Infrastructure](#11-deployment-and-infrastructure)
+    - 11.1 [Server Configuration](#111-server-configuration)
+    - 11.2 [API Endpoints](#112-api-endpoints)
+    - 11.3 [Environment Management](#113-environment-management)
+
+Appendices
+- [Appendix A: Complete Code Reference](#appendix-a-complete-code-reference)
+- [Appendix B: API Documentation](#appendix-b-api-documentation)
+- [Appendix C: Security Ontology Reference](#appendix-c-security-ontology-reference)
+- [Appendix D: Design Pattern Catalog](#appendix-d-design-pattern-catalog)
+- [Appendix E: Glossary](#appendix-e-glossary)
 
 ---
 
-## 1. System Architecture Overview
+## 1. Introduction and System Overview
 
-### 1.1 High-Level Architecture Diagram
+### 1.1 Purpose and Scope
+
+CyberD3sign is an enterprise-grade application designed to bridge business process modeling with cybersecurity analysis through AI-powered automation. The system enables users to create, modify, and analyze Business Process Model and Notation (BPMN) diagrams while receiving intelligent security recommendations.
+
+**Primary Objectives:**
+1. Enable natural language-based BPMN diagram creation
+2. Provide real-time security analysis and recommendations
+3. Support multiple LLM providers for flexibility and redundancy
+4. Deliver 3D visualization of business processes
+5. Integrate security ontology mapping with process elements
+
+### 1.2 System Context
+
+The application operates in a dual-server architecture:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     UNITY CLIENT (Frontend)                      │
-│                    Unity 2020.2.1f1 / C#                         │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ Login Scene  │  │  Menu Scene  │  │  BPMN Scene  │          │
-│  │ (Auth UI)    │→ │ (Dashboard)  │→ │ (3D Editor)  │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-│                           ↓                    ↓                 │
-│  ┌──────────────────────────────────────────────────────┐       │
-│  │         Core Components                               │       │
-│  │  • DiagramHandler - Data loading/management          │       │
-│  │  • SaveHandler - Persistence operations              │       │
-│  │  • LoadElements - BPMN rendering                     │       │
-│  │  • BPMNSecurityAnalyzer - Claude integration         │       │
-│  └──────────────────────────────────────────────────────┘       │
-└─────────────────┬────────────────────────────┬──────────────────┘
-                  │                             │
-        HTTP/HTTPS (WWW)          HTTP/HTTPS (UnityWebRequest)
-                  ↓                             ↓
-    ┌─────────────────────────┐   ┌────────────────────────────┐
-    │  IONOS PHP Backend      │   │  FastAPI AI Backend        │
-    │  (cyberd3sign.com)      │   │  (Port 8000 - Docker)      │
-    ├─────────────────────────┤   ├────────────────────────────┤
-    │ • User Authentication   │   │ • BPMN AI Assistant        │
-    │ • BPMN Storage (MySQL)  │   │ • LLM Provider Abstraction │
-    │ • Security Req Storage  │   │ • Security Suggestions     │
-    │ • Session Management    │   │ • Intent Classification    │
-    └─────────────────────────┘   └────────────────┬───────────┘
-                                                     │
-                                          External LLM APIs
-                                                     ↓
-                        ┌────────────────────────────────────────┐
-                        │ • OpenAI (GPT-4.1, o4-mini)            │
-                        │ • Anthropic (Claude Sonnet/Opus 4)     │
-                        │ • Google (Gemini 2.5 Flash/Pro)        │
-                        │ • Fireworks AI (Llama, Qwen, Deepseek) │
-                        └────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      User Interface                           │
+│                    (Unity 3D Client)                          │
+└────────────┬──────────────────────────┬──────────────────────┘
+             │                          │
+             │ REST API                 │ REST API
+             │ (LLM Functions)          │ (Auth/Data)
+             │                          │
+┌────────────▼────────────────┐  ┌──────▼─────────────────────┐
+│  SERVER 1: IONOS Cloud      │  │  SERVER 2: cyberd3sign.com │
+│  IP: 217.154.116.117:8000   │  │  Domain: cyberd3sign.com   │
+│  ┌──────────────────────┐   │  │  ┌─────────────────────┐   │
+│  │  FastAPI Backend     │   │  │  │  PHP Backend        │   │
+│  │  - Intent Detection  │   │  │  │  - User Login       │   │
+│  │  - BPMN Generation   │   │  │  │  - Registration     │   │
+│  │  - Security Analysis │   │  │  │  - Session Mgmt     │   │
+│  │  - LLM Integration   │   │  │  │  - Diagram CRUD     │   │
+│  │  - API Key Storage   │   │  │  └─────────┬───────────┘   │
+│  └──────────┬───────────┘   │  │            │               │
+│             │               │  │  ┌─────────▼───────────┐   │
+│             │ API Calls     │  │  │  MySQL Database     │   │
+│             │ (using keys)  │  │  │  - Users            │   │
+│  ┌──────────▼───────────┐   │  │  │  - BPMN Diagrams    │   │
+│  │  External LLM APIs   │   │  │  │  - Security Data    │   │
+│  │  - OpenAI GPT        │   │  │  └─────────────────────┘   │
+│  │  - Anthropic Claude  │   │  │                            │
+│  │  - Google Gemini     │   │  │  Apache/PHP/MySQL Stack    │
+│  │  - Fireworks AI      │   │  │                            │
+│  └──────────────────────┘   │  │                            │
+│                              │  │                            │
+│  Python 3.12 + FastAPI       │  │  Traditional Web Hosting   │
+└──────────────────────────────┘  └────────────────────────────┘
+
+**Key Architecture Benefits:**
+- **Separation of Concerns**: AI processing isolated from data persistence
+- **Cost Efficiency**: IONOS Cloud stores API keys, eliminating GPU rental costs
+- **Security**: LLM credentials on dedicated server, never exposed to client
+- **Scalability**: Independent scaling of AI and data backends
 ```
 
-### 1.2 Technology Stack
+### 1.3 Key Features
 
-| Layer | Technology | Version | Purpose |
-|-------|------------|---------|---------|
-| **Frontend** | Unity | 2020.2.1f1 | 3D visualization & UI |
-| | C# | .NET 4.x | Application logic |
-| | TextMesh Pro | Bundled | Advanced text rendering |
-| **AI Backend** | Python | 3.12 | Runtime environment |
-| | FastAPI | 0.115.6+ | REST API framework |
-| | Anthropic SDK | 0.40.0+ | Claude integration |
-| | LiteLLM | 1.66.2+ | Multi-LLM abstraction |
-| | Pydantic | 2.10.3+ | Data validation |
-| | Uvicorn | 0.33.0+ | ASGI server |
-| **Database Backend** | PHP | 7.x+ | Legacy API layer |
-| | MySQL | 5.7+ | Persistent storage |
-| **Deployment** | Docker | Latest | Containerization |
-| | Docker Compose | Latest | Orchestration |
-| **Infrastructure** | IONOS | N/A | Web hosting |
+**AI-Powered Diagram Generation:**
+- Natural language processing for intent detection
+- Automatic BPMN XML generation from text descriptions
+- Multi-turn conversational editing and refinement
+- Support for GPT-4.1-nano and other LLM models
+
+**Security Analysis:**
+- Automated security requirement mapping
+- Six-category security ontology framework
+- Element-level security recommendations
+- Visual security overlay rendering
+
+**Visualization:**
+- 3D Unity-based rendering engine
+- Dynamic prefab instantiation
+- Automatic layout and scaling
+- Interactive element manipulation
 
 ---
 
-## 2. Frontend Architecture (Unity)
+## 2. System Architecture
 
-### 2.1 Scene Hierarchy
+### 2.1 High-Level Architecture
+
+CyberD3sign implements a three-tier architecture pattern with dual-server backend infrastructure:
+
+**Presentation Tier (Unity Client):**
+- Unity 2020.2.1f1 with C# .NET 4.x
+- 3D visualization and user interaction
+- Client-side state management
+- XML processing and rendering
+- Communicates with both backend servers
+
+**Application Tier (Dual-Server Backend):**
+
+**Server 1 - IONOS Cloud (217.154.116.117:8000):**
+- **FastAPI Backend** (Python 3.12):
+  - AI processing and LLM integration
+  - Intent detection and routing
+  - BPMN generation from natural language
+  - Security analysis and suggestions
+  - Stores LLM API keys (OpenAI, Anthropic, Google, Fireworks)
+  - No GPU infrastructure needed - uses provider APIs
+
+**Server 2 - cyberd3sign.com:**
+- **PHP Backend** (Apache):
+  - User authentication and authorization
+  - User registration and login
+  - Session management
+  - Diagram CRUD operations
+  - Web hosting
+
+**Data Tier:**
+- MySQL database on cyberd3sign.com
+- User accounts and credentials
+- BPMN diagram storage
+- Security requirements data
+- JSON-based data exchange between tiers
+- XML document storage for diagrams
+
+**Cost-Saving Architecture:**
+The dual-server design separates AI processing from data persistence. The IONOS Cloud server stores all LLM provider API keys, allowing the application to leverage powerful AI models (GPT-4, Claude, Gemini) without requiring expensive GPU infrastructure. The server makes API calls on behalf of the Unity client, keeping credentials secure and eliminating GPU rental costs.
+
+### 2.2 Component Diagram
 
 ```
-CyberD3sign Unity Project
-│
-├── Login.unity          - User authentication
-├── Menu.unity           - Main dashboard
-├── BPMN.unity           - BPMN diagram editor
-├── Build.unity          - Security requirements editor
-├── Policy.unity         - Security policy management
-├── Loading.unity        - Loading screen
-├── Credits.unity        - Credits
-└── About.unity          - About page
+Unity Frontend Components:
+┌──────────────────────────────────────────────────────────┐
+│  GPTManager.cs                                           │
+│  ├── Intent Detection (determine_intent)                │
+│  ├── Diagram Modification (modify)                      │
+│  ├── Conversational Interface (talk)                    │
+│  └── Security Suggestions (suggest_security)            │
+└────────────┬─────────────────────────────────────────────┘
+             │
+             │ Calls
+             ▼
+┌──────────────────────────────────────────────────────────┐
+│  loadLLMDiagram.cs / loadBPMNDiagram.cs                 │
+│  ├── XML Parsing                                        │
+│  ├── Prefab Instantiation                              │
+│  ├── Position Scaling (0.26x factor)                   │
+│  └── Arrow Rendering                                   │
+└────────────┬─────────────────────────────────────────────┘
+             │
+             │ Uses
+             ▼
+┌──────────────────────────────────────────────────────────┐
+│  DiagramHandler.cs                                       │
+│  ├── Static Data Storage                               │
+│  ├── BPMN XML Management                                │
+│  └── Security Requirements Tracking                     │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Core Script Components
+### 2.3 Technology Stack
 
-#### 2.2.1 DiagramHandler.cs (889 lines)
+**Frontend Technologies:**
+| Component | Technology | Version | Purpose |
+|-----------|-----------|---------|---------|
+| Game Engine | Unity | 2020.2.1f1 | 3D rendering and application framework |
+| Language | C# | .NET 4.x | Application logic |
+| UI Framework | Unity UI | Built-in | User interface components |
+| Text Rendering | TextMeshPro | Built-in | Advanced text display |
+| Networking | UnityWebRequest | Built-in | HTTP communication |
 
-**Location:** `Assets/Scripts/DiagramHandler.cs`
+**Backend Technologies (Dual-Server):**
+| Component | Technology | Version | Server | Purpose |
+|-----------|-----------|---------|--------|---------|
+| AI Framework | FastAPI | Latest | IONOS Cloud | LLM processing with API keys |
+| Language | Python | 3.12 | IONOS Cloud | AI backend logic |
+| Data Backend | PHP | 7.x+ | cyberd3sign.com | User auth and persistence |
+| Database | MySQL | 5.7+ | cyberd3sign.com | Data storage |
+| Web Server | Apache | 2.4+ | cyberd3sign.com | PHP hosting |
+| LLM Access | API Keys | N/A | IONOS Cloud | Server-side credentials (no GPU) |
 
-**Responsibilities:**
-- Loading BPMN and Security diagrams from IONOS server
-- Parsing server responses (PHP format: `field1^field2^field3~...`)
-- Managing in-memory XML documents (BPMNDoc, secDoc, reqDoc)
-- Pagination of diagram lists (10 items per page)
-- User interface population
+### 2.4 Design Patterns
 
-**Key Static Variables:**
+**Facade Pattern (llm_facade.py): (IONOS SERVER SIDE)**
+```python
+class UnifiedLLMFacade:
+    """
+    Provides a unified interface to multiple LLM providers:
+    - OpenAI GPT-4
+    - Anthropic Claude
+    - Google Gemini
+    - Fireworks AI
+    """
+```
+
+**Singleton Pattern (DiagramHandler.cs):**
+- Static variables for global state management
+- Single source of truth for BPMN data
+- Shared across all Unity components
+
+**Factory Pattern (Prefab Instantiation):**
+- Dynamic GameObject creation based on element type
+- Resource loading from categorized folders (Events/Tasks/Gateways)
+
+**Repository Pattern:**
+- SaveHandler for diagram persistence
+- DiagramHandler for diagram retrieval
+
+---
+
+## 3. AI-Powered LLM Integration Layer
+
+### 3.1 GPTManager Component (Unity Client Side)
+
+**File Location:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/GPTManager.cs` 
+
+**Purpose:**
+GPTManager serves as the central orchestrator for all AI-powered interactions in the CyberD3sign application. It manages communication with the FastAPI backend, implements intent-based routing, and handles conversation history.
+
+**Key Responsibilities:**
+
+1. **Intent Detection and Routing**
+2. **Multi-Endpoint API Communication**
+3. **Conversation History Management**
+4. **Security Suggestion Processing**
+5. **BPMN Diagram Generation Coordination**
+
+**Architecture:**
+
+```
+User Input → GPTManager.SendMessageToGPT()
+                   ↓
+         DetermineIntent() → FastAPI /determine_intent
+                   ↓
+            RouteByIntent()
+                   ↓
+    ┌──────────────┼──────────────┐
+    │              │              │
+    ▼              ▼              ▼
+SendToModify() SendToTalk() SendToSuggestSecurity()
+    │              │              │
+    ▼              ▼              ▼
+/modify        /talk        /suggest_security
+```
+
+**API Endpoint Configuration:**
+
 ```csharp
-public static string BPMNDiagramData        // Currently loaded BPMN XML
-public static string securityDiagramData    // Security diagram XML
-public static string securityRequirements   // Security requirements XML
-public static string BPMNFileName           // Current BPMN filename
-public static string securityFileName       // Current security filename
-public static XmlDocument BPMNDoc           // BPMN XML document
-public static XmlDocument secDoc            // Security diagram document
-public static XmlDocument reqDoc            // Requirements document
-public static List<BPMNDiagram> bpmndiagramList
-public static List<SecurityDiagram> secdiagramList
+[Header("API URLs")]
+private string intentUrl = "http://217.154.116.117:8000/determine_intent";
+private string modifyUrl = "http://217.154.116.117:8000/modify";
+private string talkUrl = "http://217.154.116.117:8000/talk";
+private string suggestUrl = "http://217.154.116.117:8000/suggest_security";
 ```
 
-**Critical Methods:**
+**Server Details:**
+- **Server:** IONOS Cloud (dedicated to LLM processing)
+- **IP Address:** 217.154.116.117
+- **Port:** 8000
+- **Protocol:** HTTP (REST)
+- **Content-Type:** application/json
+- **API Keys Stored:** OpenAI, Anthropic, Google, Fireworks
+- **Cost Model:** Pay-per-API-call (no GPU infrastructure needed)
 
-| Method | Purpose | Called By |
-|--------|---------|-----------|
-| `getDiagrams()` | Fetch BPMN diagrams from server | Menu scene |
-| `SecurityDiagrams()` | Fetch security diagrams from server | Triggered after BPMN load |
-| `ParseBPMN(string)` | Parse PHP response into BPMNDiagram list | getDiagrams() |
-| `ParseSecDiagrams(string)` | Parse PHP response into SecurityDiagram list | SecurityDiagrams() |
-| `BPMNClickHandler()` | Load selected BPMN into editor | UI button click |
-| `SecurityClickHandler()` | Load security diagram + requirements | UI button click |
-| `DeleteBPMNRow()` | Delete BPMN from server | Delete button |
+### 3.2 Intent Detection System
 
-**Server Endpoints Called:**
-```
-POST /database/UserMechanics/diagrams.php
-POST /database/UserMechanics/securitydiagrams.php
-POST /database/UserMechanics/deletebpmn.php
-POST /database/UserMechanics/deletesecurityrequirements.php
-```
+**Method:** `DetermineIntent(string userMessage)`
 
-#### 2.2.2 SaveHandler.cs (322 lines)
-
-**Location:** `Assets/Scripts/SaveHandler.cs`
-
-**Responsibilities:**
-- Serializing BPMN/Security XML documents to strings
-- Uploading diagrams to IONOS server
-- Screenshot capture for diagram thumbnails
-- Differentiating between new saves and updates
-
-**Key Static Variables:**
+**Flow:**
 ```csharp
-public static bool saveDiagram               // Trigger for BPMN save
-public static bool saveSecurityDiagram       // Trigger for security save
-public static string bpmnDiagram             // BPMN XML string
-public static string securityDiagram         // Security XML string
-public static string securityRequirements    // Requirements XML string
-public static string diagramUI               // User-facing diagram name
-public static List<elementSaveDetails> elementSaveDetails
-public static List<sequenceFlow> sequenceFlows
-```
-
-**Critical Methods:**
-
-| Method | Purpose | Data Sent |
-|--------|---------|-----------|
-| `tSaveBPMN()` | Convert BPMNDoc to XML string | Static bpmnDiagram |
-| `tSaveSecurity()` | Convert secDoc to XML string | Static securityDiagram |
-| `tSaveRequirements()` | Convert reqDoc to XML string | Static securityRequirements |
-| `saveBPMN()` | Upload BPMN to server | diagram, uID, diagramUI, company, username |
-| `saveSecurity()` | Upload security + screenshot | diagram, uID, diagramUI, BPMNID, company, username, screenshot (PNG binary) |
-| `saveRequirements()` | Upload security requirements | diagram, uID, diagramUI, username |
-
-**Screenshot Workflow:**
-```csharp
-// saveSecurity() - Lines 121-211
-1. Store original camera position
-2. Calculate center of BPMN diagram (middle element)
-3. Position camera at elevation + distance from center
-4. Wait for frame render (yield WaitForEndOfFrame)
-5. Capture screen to Texture2D (ReadPixels)
-6. Encode to PNG byte array
-7. Attach to WWWForm as binary data
-8. Restore original camera position
-```
-
-**Server Endpoints Called:**
-```
-POST /database/UserMechanics/savediagrams.php     (new BPMN)
-POST /database/UserMechanics/updatediagrams.php   (existing BPMN)
-POST /database/UserMechanics/savesecurity.php     (new security)
-POST /database/UserMechanics/updatesecurity.php   (existing security)
-POST /database/UserMechanics/saverequirements.php (security requirements)
-```
-
-#### 2.2.3 Login.cs (212 lines)
-
-**Location:** `Assets/Scripts/Login.cs`
-
-**Responsibilities:**
-- User credential collection
-- Server connection toggle (localhost vs. production)
-- Session initialization via UserSession singleton
-- Navigation to Menu scene on success
-
-**Authentication Flow:**
-```csharp
-// login() - Lines 120-165
-1. Collect username/password from InputFields
-2. Create WWWForm with credentials
-3. POST to /database/UserMechanics/login.php
-4. If response is non-empty string → username validated
-5. Store currentUser = response text
-6. Load "Menu" scene
-```
-
-**Server Connection Management:**
-```csharp
-// ServerConnection.cs - Lines 7-9
-s_localHost = "http://localhost"
-s_cyberD3sign = "http://www.cyberd3sign.com"
-s_cyberD3signHTTPS = "https://www.cyberd3sign.com"
-
-// Toggle controlled by localhost_TOGGLE checkbox
-UserSession.Instance.ServerConnection = localhost_TOGGLE.isOn
-    ? ServerConnection.s_localHost
-    : ServerConnection.s_cyberD3sign;
-```
-
-**Server Endpoint Called:**
-```
-POST /database/UserMechanics/login.php
-  - Fields: myform_user, myform_pass
-  - Success: Returns username as plain text
-  - Failure: Returns empty string or error
-```
-
-#### 2.2.4 BPMNSecurityAnalyzer.cs (810 lines)
-
-**Location:** `Assets/Scripts/BPMNSecurityAnalyzer.cs`
-
-**Responsibilities:**
-- Direct integration with Claude API (Anthropic)
-- Security analysis of BPMN elements
-- AI-powered security control suggestions
-- Ontology path mapping
-
-**Key Configuration:**
-```csharp
-[SerializeField] private string apiKey;                              // Claude API key
-[SerializeField] private string apiEndpoint = "https://api.anthropic.com/v1/messages";
-[SerializeField] private string claudeModel = "claude-3-opus-20240229";
-```
-
-**Critical Methods:**
-
-| Method | Purpose | API Called |
-|--------|---------|------------|
-| `AnalyzeFullDiagram()` | Analyze entire BPMN for security | Anthropic Claude |
-| `AnalyzeElement(string elementId)` | Analyze specific BPMN element | Anthropic Claude |
-| `AnalyzeBPMNWithClaude()` | Core LLM API call | POST /v1/messages |
-| `ParseClaudeResponse()` | Extract security suggestions from JSON | N/A |
-| `ApplySuggestions()` | Apply AI recommendations to diagram | N/A |
-| `ApplySecurityToElement()` | Update secDoc with security category | N/A |
-
-**LLM Prompt Structure (Lines 215-263):**
-```
-You are an expert in BPMN security analysis.
-Focus on analyzing the BPMN element with ID: {elementId}
-
-Security Categories to consider:
-1. accesscontrol - Authentication, identification, authorization
-2. privacy - User consent, confidentiality
-3. integrity - Data, hardware, personnel, and software integrity
-4. accountability - Non-repudiation, audit trails
-5. attackharm - Vulnerability assessment, firewalls, intrusion detection
-6. availability - Backups, redundancy, uptime requirements
-
-Here's the BPMN XML to analyze:
-```xml
-{bpmnXml}
-```
-
-Format your response as JSON:
+public void SendMessageToGPT(string userMessage)
 {
-  "elementId1": {
-    "explanation": "This element handles sensitive data.",
-    "suggestedControls": ["accesscontrol", "privacy.confidentiality"]
-  }
+    if (!isRequestInProgress && !string.IsNullOrEmpty(userMessage))
+    {
+        // Add to conversation history
+        messageHistory.Add(new Message {
+            role = "user",
+            content = userMessage
+        });
+
+        // Start intent detection coroutine
+        StartCoroutine(DetermineIntent(userMessage));
+    }
 }
 ```
 
-**Response Parsing (Lines 266-351):**
-- Extracts JSON from Claude response
-- Parses nested structure (element → explanation + suggested controls)
-- Handles fallback to text-based extraction if JSON parsing fails
-- Returns `Dictionary<string, List<string>>`
+**Intent Detection Request:**
 
-**Security Application (Lines 672-742):**
 ```csharp
-// Creates/updates security XML structure
+IntentRequestWrapper wrapper = new IntentRequestWrapper
+{
+    model = "gpt-4.1-nano",
+    message_history = messageHistory.ToArray(),
+    process = new ProcessItem[0]
+};
+
+string json = JsonUtility.ToJson(wrapper);
+byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+```
+
+**Supported Intents:**
+1. **create_process** - Create new BPMN diagram from scratch
+2. **edit_process** - Modify existing diagram
+3. **modify** - Generic modification intent
+4. **chat** - General conversation
+5. **ask_question** - Query about the system or process
+6. **talk** - Conversational interaction
+7. **suggest_security** - Request security analysis
+
+**Intent Routing Logic:**
+
+```csharp
+private void RouteByIntent(string intent, string message)
+{
+    Debug.Log($"Intent: {intent}");
+
+    switch (intent)
+    {
+        case "create_process":
+        case "edit_process":
+        case "modify":
+            StartCoroutine(SendToModify(message));
+            break;
+
+        case "chat":
+        case "ask_question":
+        case "talk":
+            StartCoroutine(SendToTalk(message));
+            break;
+
+        case "suggest_security":
+            StartCoroutine(SendToSuggestSecurity());
+            break;
+
+        default:
+            responseText.text = $"Unsupported intent: {intent}";
+            isRequestInProgress = false;
+            break;
+    }
+}
+```
+
+### 3.3 Conversation Management
+
+**Message History Structure:**
+
+```csharp
+[System.Serializable]
+public class Message {
+    public string role;      // "user" or "assistant"
+    public string content;   // Message text
+}
+
+private List<Message> messageHistory = new List<Message>();
+```
+
+**Multi-Turn Conversation Support:**
+- Maintains complete conversation context
+- Sent with every API request for contextual understanding
+- Enables follow-up questions and iterative refinement
+
+**Example Conversation Flow:**
+```
+User: "Create a purchase order process"
+  → Intent: create_process
+  → Route: SendToModify()
+  → Result: BPMN XML generated
+
+User: "Add approval step"
+  → Intent: edit_process
+  → Context: Previous BPMN + conversation history
+  → Route: SendToModify()
+  → Result: Modified BPMN XML
+
+User: "What security measures should I add?"
+  → Intent: suggest_security
+  → Route: SendToSuggestSecurity()
+  → Result: Security ontology mappings
+```
+
+### 3.4 API Integration Architecture
+
+**Modify Endpoint (BPMN Generation):**
+
+```csharp
+private IEnumerator SendToModify(string userPrompt)
+{
+    responseText.text = "Generating BPMN diagram...";
+    messageHistory.Add(new Message {
+        role = "user",
+        content = userPrompt
+    });
+
+    string escapedPrompt = userPrompt.Replace("\"", "\\\"");
+    string json = "{\"model\":\"gpt-4.1-nano\"," +
+                  "\"message_history\":[{\"role\":\"user\"," +
+                  "\"content\":\"" + escapedPrompt + "\"}]," +
+                  "\"process\":null}";
+
+    byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+
+    using UnityWebRequest request = new UnityWebRequest(modifyUrl, "POST")
+    {
+        uploadHandler = new UploadHandlerRaw(bodyRaw),
+        downloadHandler = new DownloadHandlerBuffer()
+    };
+    request.SetRequestHeader("Content-Type", "application/json");
+
+    yield return request.SendWebRequest();
+
+    if (request.result == UnityWebRequest.Result.Success)
+    {
+        ModifyResponse parsed = JsonUtility.FromJson<ModifyResponse>(
+            request.downloadHandler.text
+        );
+
+        if (!string.IsNullOrEmpty(parsed.bpmn_xml))
+        {
+            // Store BPMN XML in global handler
+            DiagramHandler.BPMNDiagramData = parsed.bpmn_xml;
+            latestResponse = parsed.bpmn_xml;
+
+            // Trigger diagram rendering
+            if (loadLLMDiagramInstance != null)
+            {
+                loadLLMDiagramInstance.InitializeDiagram();
+                responseText.text = "Diagram rendered!";
+            }
+        }
+    }
+
+    isRequestInProgress = false;
+}
+```
+
+**Talk Endpoint (Conversational Interface):**
+
+```csharp
+private IEnumerator SendToTalk(string userPrompt)
+{
+    responseText.text = "Getting response...";
+
+    TalkRequestWrapper wrapper = new TalkRequestWrapper
+    {
+        model = "gpt-4.1-nano",
+        message_history = messageHistory.ToArray(),
+        process = new ProcessItem[0],
+        needs_to_be_final_comment = false
+    };
+
+    string json = JsonUtility.ToJson(wrapper);
+    byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+
+    using UnityWebRequest request = new UnityWebRequest(talkUrl, "POST")
+    {
+        uploadHandler = new UploadHandlerRaw(bodyRaw),
+        downloadHandler = new DownloadHandlerBuffer()
+    };
+    request.SetRequestHeader("Content-Type", "application/json");
+
+    yield return request.SendWebRequest();
+
+    if (request.result == UnityWebRequest.Result.Success)
+    {
+        TalkResponse parsed = JsonUtility.FromJson<TalkResponse>(
+            request.downloadHandler.text
+        );
+
+        responseText.text = parsed.message;
+
+        // Add assistant response to history
+        messageHistory.Add(new Message {
+            role = "assistant",
+            content = parsed.message
+        });
+
+        latestResponse = parsed.message;
+    }
+
+    isRequestInProgress = false;
+}
+```
+
+**Security Suggestion Endpoint:**
+
+```csharp
+private IEnumerator SendToSuggestSecurity()
+{
+    responseText.text = "Checking for security suggestions...";
+
+    var suggestReq = new SuggestRequestWrapper
+    {
+        model = "gpt-4.1-nano",
+        modified_bpmn_xml = DiagramHandler.BPMNDiagramData,
+        message_history = messageHistory.ToArray()
+    };
+
+    string json = JsonUtility.ToJson(suggestReq);
+    byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+
+    using UnityWebRequest request = new UnityWebRequest(suggestUrl, "POST")
+    {
+        uploadHandler = new UploadHandlerRaw(bodyRaw),
+        downloadHandler = new DownloadHandlerBuffer()
+    };
+    request.SetRequestHeader("Content-Type", "application/json");
+
+    yield return request.SendWebRequest();
+
+    if (request.result == UnityWebRequest.Result.Success)
+    {
+        string rawJson = request.downloadHandler.text;
+        Debug.Log("Raw Suggestions JSON: " + rawJson);
+
+        // Parse using MiniJson for complex nested structures
+        var parsed = MiniJson.Deserialize(rawJson)
+            as Dictionary<string, object>;
+
+        // Extract explanation
+        string explanation = parsed.ContainsKey("explanation")
+            ? parsed["explanation"].ToString()
+            : null;
+
+        if (!string.IsNullOrEmpty(explanation))
+        {
+            responseText.text = $"🧠 Security Summary:\n{explanation}";
+            latestResponse = explanation;
+        }
+
+        // Extract security ontology mappings
+        lastSecuritySuggestions = parsed.ContainsKey("security_ontologies")
+            ? (List<object>)parsed["security_ontologies"]
+            : null;
+
+        if (lastSecuritySuggestions != null)
+        {
+            // Convert to XML and visualize
+            string mergedSecurityXml =
+                ConvertSecuritySuggestionsToXml(lastSecuritySuggestions);
+
+            DiagramHandler.securityRequirements = mergedSecurityXml;
+            DrawElements.Instance().DrawBPMNSecurity();
+        }
+    }
+
+    isRequestInProgress = false;
+}
+```
+
+**Security XML Conversion:**
+
+This is a critical method that transforms LLM-generated security suggestions into the XML format expected by the visualization engine:
+
+```csharp
+private string ConvertSecuritySuggestionsToXml(
+    List<object> suggestions)
+{
+    XmlDocument xmlDoc = new XmlDocument();
+    XmlElement root = xmlDoc.CreateElement("ParentTaskSecurityHolder");
+    xmlDoc.AppendChild(root);
+
+    foreach (var suggestion in suggestions)
+    {
+        var dict = suggestion as Dictionary<string, object>;
+        if (dict == null) continue;
+
+        string taskId = dict["elementID"].ToString();
+        List<object> ontologyPaths = dict["ontology_path"]
+            as List<object>;
+
+        if (ontologyPaths == null) continue;
+
+        // Create TaskSecurityHolder for this element
+        XmlElement taskHolder = xmlDoc.CreateElement(
+            "TaskSecurityHolder"
+        );
+        taskHolder.SetAttribute("TaskID", taskId);
+
+        foreach (string fullPath in ontologyPaths)
+        {
+            // Example path: root/bpmnElement/privacy/confidentiality/encryption
+            string[] tags = fullPath.Split('/');
+            if (tags.Length < 3) continue;
+
+            // Skip "root" and "bpmnElement" prefixes
+            int startIndex = System.Array.IndexOf(tags, "bpmnElement") + 1;
+            if (startIndex <= 0 || startIndex >= tags.Length) continue;
+
+            // Build nested XML structure
+            XmlElement currentParent = taskHolder;
+            for (int i = startIndex; i < tags.Length; i++)
+            {
+                string tag = tags[i];
+                XmlElement existing = null;
+
+                // Check if tag already exists (avoid duplicates)
+                foreach (XmlNode child in currentParent.ChildNodes)
+                {
+                    if (child.Name == tag)
+                    {
+                        existing = (XmlElement)child;
+                        break;
+                    }
+                }
+
+                if (existing == null)
+                {
+                    XmlElement newNode = xmlDoc.CreateElement(tag);
+                    currentParent.AppendChild(newNode);
+                    currentParent = newNode;
+                }
+                else
+                {
+                    currentParent = existing;
+                }
+            }
+        }
+
+        root.AppendChild(taskHolder);
+    }
+
+    return xmlDoc.OuterXml;
+}
+```
+
+**Data Structures:**
+
+```csharp
+[System.Serializable]
+public class Message {
+    public string role;
+    public string content;
+}
+
+[System.Serializable]
+public class IntentResponse {
+    public string intent;
+    public float confidence;
+}
+
+[System.Serializable]
+public class ModifyResponse {
+    public string bpmn_xml;
+    public string bpmn_json;
+}
+
+[System.Serializable]
+public class TalkResponse {
+    public string message;
+}
+
+[System.Serializable]
+public class TalkRequestWrapper
+{
+    public string model;
+    public Message[] message_history;
+    public ProcessItem[] process;
+    public bool needs_to_be_final_comment;
+}
+
+[System.Serializable]
+public class IntentRequestWrapper
+{
+    public string model;
+    public Message[] message_history;
+    public ProcessItem[] process;
+}
+
+[System.Serializable]
+public class SuggestRequestWrapper
+{
+    public string model;
+    public string modified_bpmn_xml;
+    public Message[] message_history;
+}
+
+[System.Serializable]
+public class ProcessItem { }
+```
+
+---
+
+## 4. Diagram Loading and Rendering System
+
+### 4.1 loadBPMNDiagram Component
+
+**File Location:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/loadBPMNDiagram.cs` (142 lines)
+
+**Purpose:**
+Loads and renders BPMN diagrams from XML data stored in DiagramHandler. This component handles user-created or manually-loaded diagrams (not LLM-generated diagrams, which use loadLLMDiagram).
+
+**Key Features:**
+1. XML parsing of BPMN structure
+2. Dynamic prefab instantiation
+3. Arrow/edge rendering
+4. Position and scale application
+
+**Initialization Flow:**
+
+```csharp
+void Start()
+{
+    XmlDocument xmlDoc = new XmlDocument();
+
+    if (!string.IsNullOrEmpty(DiagramHandler.BPMNDiagramData))
+    {
+        xmlData = DiagramHandler.BPMNDiagramData;
+        xmlDoc.LoadXml(xmlData);
+
+        XmlNodeList bpmnElements = xmlDoc.GetElementsByTagName("BPMNShape");
+        XmlNodeList bpmnArrows = xmlDoc.GetElementsByTagName("BPMNEdge");
+
+        // Process shapes
+        foreach (XmlNode bpmnShape in bpmnElements)
+        {
+            // Extract element data and instantiate
+        }
+
+        // Process arrows
+        foreach (XmlNode bpmnEdge in bpmnArrows)
+        {
+            // Create arrow connections
+        }
+    }
+    else
+    {
+        // Initialize empty XML structure
+        XmlElement elemRoot = (XmlElement)xmlDoc.AppendChild(
+            xmlDoc.CreateElement("root")
+        );
+        DiagramHandler.BPMNDiagramData = xmlDoc.ToString();
+        DiagramHandler.BPMNDoc = xmlDoc;
+    }
+}
+```
+
+**Element Processing:**
+
+```csharp
+foreach (XmlNode bpmnShape in bpmnElements)
+{
+    // Extract attributes
+    string elementType = bpmnShape.Attributes["bpmnElement"].Value;
+    string ID = bpmnShape.Attributes["id"].Value;
+    float height = float.Parse(
+        bpmnShape.FirstChild.Attributes["height"].Value
+    );
+    float width = float.Parse(
+        bpmnShape.FirstChild.Attributes["width"].Value
+    );
+    float x = float.Parse(
+        bpmnShape.FirstChild.Attributes["x"].Value
+    );
+    float y = float.Parse(
+        bpmnShape.FirstChild.Attributes["y"].Value
+    );
+
+    // Save element details for persistence
+    SaveHandler.elementSaveDetails.Add(
+        new elementSaveDetails(elementType, ID, height, width, x, y)
+    );
+
+    // Load appropriate prefab based on element type
+    GameObject BPMNShape;
+
+    if (elementType.Contains("Event"))
+    {
+        BPMNShape = Instantiate(
+            Resources.Load("BPMN Engine Assets/Events/" + elementType)
+        ) as GameObject;
+    }
+    else if (elementType.Contains("Gateway"))
+    {
+        BPMNShape = Instantiate(
+            Resources.Load("BPMN Engine Assets/Gateways/" + elementType)
+        ) as GameObject;
+    }
+    else if (elementType == "textHolder")
+    {
+        BPMNShape = Instantiate(
+            Resources.Load("BPMN Engine Assets/" + elementType)
+        ) as GameObject;
+    }
+    else
+    {
+        BPMNShape = Instantiate(
+            Resources.Load("BPMN Engine Assets/Tasks/" + elementType)
+        ) as GameObject;
+    }
+
+    // Set element text if available
+    if (bpmnShape.Attributes["text"] != null)
+    {
+        string elementText = bpmnShape.Attributes["text"].Value;
+        SaveHandler.elementSaveDetails[
+            SaveHandler.elementSaveDetails.Count - 1
+        ].updateElementText(elementText);
+        BPMNShape.GetComponentInChildren<Text>().text = elementText;
+    }
+
+    // Position element
+    BPMNShape.name = ID;
+    BPMNShape.transform.position = new Vector3(
+        x,
+        BPMNShape.transform.position.y,
+        y
+    );
+
+    // Scale pools and lanes differently
+    if (elementType.Contains("pool") || elementType.Contains("lane"))
+    {
+        BPMNShape.transform.GetChild(5).transform.localScale =
+            new Vector3(width, height, 0);
+    }
+}
+```
+
+**Arrow Processing:**
+
+```csharp
+foreach (XmlNode bpmnEdge in bpmnArrows)
+{
+    string arrowName = bpmnEdge.Attributes["id"].Value;
+    string startElement = bpmnEdge.Attributes["startElement"].Value;
+    string startPosition = bpmnEdge.Attributes["startPosition"].Value;
+    string targetElement = bpmnEdge.Attributes["targetElement"].Value;
+    string targetPosition = bpmnEdge.Attributes["targetPosition"].Value;
+
+    List<vertexPosition> positions = new List<vertexPosition>();
+    XmlNodeList arrowPositions = bpmnEdge.ChildNodes;
+
+    // Add start position
+    positions.Add(new vertexPosition(
+        0,
+        float.Parse(arrowPositions[0].Attributes["x"].Value),
+        float.Parse(arrowPositions[0].Attributes["y"].Value)
+    ));
+
+    // Add intermediate waypoints
+    for (int i = 1; i < arrowPositions.Count - 1; i++)
+    {
+        positions.Add(new vertexPosition(
+            i,
+            float.Parse(arrowPositions[i].Attributes["x"].Value),
+            float.Parse(arrowPositions[i].Attributes["y"].Value)
+        ));
+    }
+
+    // Add end position
+    positions.Add(new vertexPosition(
+        arrowPositions.Count - 1,
+        float.Parse(arrowPositions[arrowPositions.Count - 1]
+            .Attributes["x"].Value),
+        float.Parse(arrowPositions[arrowPositions.Count - 1]
+            .Attributes["y"].Value)
+    ));
+
+    // Add arrow to source element
+    GameObject.Find(startElement)
+        .GetComponentInChildren<createNewArrow>()
+        .elementArrows.Add(
+            new arrow(
+                arrowName,
+                startElement,
+                startPosition,
+                targetElement,
+                targetPosition,
+                positions
+            )
+        );
+}
+```
+
+### 4.2 loadLLMDiagram Component
+
+**File Location:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/loadLLMDiagram.cs` (1000 lines, including multiple implementation iterations)
+
+**Purpose:**
+Specialized component for rendering LLM-generated BPMN diagrams. Includes advanced features like automatic scaling, gateway arrow position adjustment, and element type normalization.
+
+**Key Differences from loadBPMNDiagram:**
+1. **Automatic Scaling**: Applies 0.26x scale factor to all coordinates
+2. **Gateway Arrow Optimization**: Adjusts arrow positions for better visual layout
+3. **Element Type Normalization**: Maps generic types (e.g., "task") to specific prefab names (e.g., "businessTask")
+4. **Enhanced Error Handling**: More robust prefab loading and instantiation
+
+**Critical Scale Factor:**
+
+```csharp
+private const float scaleFactor = 0.26f;
+// 26% of original size - tuned for LLM-generated diagrams
+```
+
+**Why Scaling is Necessary:**
+LLM-generated diagrams often use standard BPMN coordinate systems (e.g., 100x100 pixel elements, 800x600 canvas), which are too large for Unity's 3D space. The 0.26 scale factor brings dimensions into an appropriate range for visualization.
+
+**InitializeDiagram Method:**
+
+```csharp
+public void InitializeDiagram()
+{
+    XmlDocument xmlDoc = new XmlDocument();
+
+    if (string.IsNullOrEmpty(DiagramHandler.BPMNDiagramData))
+    {
+        XmlElement root = xmlDoc.CreateElement("root");
+        xmlDoc.AppendChild(root);
+        DiagramHandler.BPMNDiagramData = xmlDoc.OuterXml;
+        DiagramHandler.BPMNDoc = xmlDoc;
+        return;
+    }
+
+    xmlData = DiagramHandler.BPMNDiagramData;
+    xmlDoc.LoadXml(xmlData);
+
+    // ✅ Adjust gateway arrow positions for better layout
+    xmlDoc = AdjustGatewayArrowPositions(xmlDoc);
+    DiagramHandler.AdjustedBPMNData = xmlDoc.OuterXml;
+
+    XmlNodeList bpmnElements = xmlDoc.GetElementsByTagName("BPMNShape");
+    XmlNodeList bpmnArrows = xmlDoc.GetElementsByTagName("BPMNEdge");
+
+    // Process elements and arrows with scaling
+}
+```
+
+**Element Processing with Scaling:**
+
+```csharp
+foreach (XmlNode bpmnShape in bpmnElements)
+{
+    try
+    {
+        string elementType = bpmnShape.Attributes["type"]?.Value;
+
+        if (string.IsNullOrEmpty(elementType))
+            elementType = bpmnShape.Attributes["bpmnElement"].Value;
+
+        // ✅ Normalize element type
+        elementType = NormalizeElementType(elementType);
+
+        string ID = bpmnShape.Attributes["id"].Value;
+
+        // ✅ Apply scale factor to all dimensions
+        float height = float.Parse(
+            bpmnShape["Bounds"].Attributes["height"].Value
+        ) * scaleFactor;
+
+        float width = float.Parse(
+            bpmnShape["Bounds"].Attributes["width"].Value
+        ) * scaleFactor;
+
+        float x = float.Parse(
+            bpmnShape["Bounds"].Attributes["x"].Value
+        ) * scaleFactor;
+
+        float y = float.Parse(
+            bpmnShape["Bounds"].Attributes["y"].Value
+        ) * scaleFactor;
+
+        string elementText = bpmnShape.Attributes["text"]?.Value ?? "";
+
+        SaveHandler.elementSaveDetails.Add(
+            new elementSaveDetails(elementType, ID, height, width, x, y)
+        );
+        SaveHandler.elementSaveDetails[
+            SaveHandler.elementSaveDetails.Count - 1
+        ].updateElementText(elementText);
+
+        // Load and instantiate prefab
+        string prefabPath = GetPrefabPath(elementType);
+        Object prefab = Resources.Load(prefabPath);
+        if (prefab == null) continue;
+
+        GameObject BPMNShape = Instantiate(prefab) as GameObject;
+        if (BPMNShape == null) continue;
+
+        BPMNShape.name = ID;
+        BPMNShape.transform.position = new Vector3(
+            x,
+            BPMNShape.transform.position.y,
+            y
+        );
+
+        Text label = BPMNShape.GetComponentInChildren<Text>();
+        if (label != null) label.text = elementText;
+
+        // Handle pool/lane scaling
+        if (elementType.Contains("pool") || elementType.Contains("lane"))
+        {
+            string[] possibleNames = {
+                "scale", "Resizable", "Background", "Body", "Container"
+            };
+
+            foreach (string name in possibleNames)
+            {
+                Transform resizable = BPMNShape.transform.Find(name);
+                if (resizable != null)
+                {
+                    resizable.localScale = new Vector3(width, height, 0);
+                    break;
+                }
+            }
+        }
+    }
+    catch (System.Exception ex)
+    {
+        Debug.LogError("❗ Error processing BPMN shape: " + ex.Message);
+    }
+}
+```
+
+**Element Type Normalization:**
+
+```csharp
+private string NormalizeElementType(string rawType)
+{
+    switch (rawType.ToLower())
+    {
+        case "start": return "startEvent";
+        case "end": return "endEvent";
+        case "task":
+        case "task1": return "businessTask";
+        case "script": return "scriptTask";
+        case "mail": return "mailTask";
+        case "manual": return "manualTask";
+        case "service": return "serviceTask";
+        case "user": return "userTask";
+        case "receive": return "receiveTask";
+        default: return rawType;
+    }
+}
+```
+
+This normalization is crucial because LLMs may generate generic type names (e.g., "task", "start", "end") that don't match the specific prefab names in the Unity Resources folder.
+
+**Gateway Arrow Position Adjustment:**
+
+```csharp
+private XmlDocument AdjustGatewayArrowPositions(XmlDocument xmlDoc)
+{
+    // 1. Collect all gateway IDs
+    HashSet<string> gatewayIds = new HashSet<string>();
+    XmlNodeList shapes = xmlDoc.GetElementsByTagName("BPMNShape");
+
+    foreach (XmlNode shape in shapes)
+    {
+        string type = shape.Attributes["type"]?.Value?.ToLower();
+        if (!string.IsNullOrEmpty(type) && type.Contains("gateway"))
+        {
+            string id = shape.Attributes["id"]?.Value;
+            if (!string.IsNullOrEmpty(id))
+                gatewayIds.Add(id);
+        }
+    }
+
+    // 2. Group outgoing edges by startElement
+    Dictionary<string, List<XmlNode>> gatewayEdges =
+        new Dictionary<string, List<XmlNode>>();
+
+    XmlNodeList edges = xmlDoc.GetElementsByTagName("BPMNEdge");
+
+    foreach (XmlNode edge in edges)
+    {
+        string startElement = edge.Attributes["startElement"]?.Value;
+        if (string.IsNullOrEmpty(startElement)) continue;
+
+        if (!gatewayIds.Contains(startElement)) continue;
+
+        if (!gatewayEdges.ContainsKey(startElement))
+            gatewayEdges[startElement] = new List<XmlNode>();
+
+        gatewayEdges[startElement].Add(edge);
+    }
+
+    // 3. Apply right, bottom, top order for each gateway
+    foreach (var kvp in gatewayEdges)
+    {
+        string[] positions = {
+            "locationRight",
+            "locationBottom",
+            "locationTop"
+        };
+
+        List<XmlNode> edgesList = kvp.Value;
+
+        for (int i = 0; i < edgesList.Count; i++)
+        {
+            XmlNode edge = edgesList[i];
+            XmlAttribute attr = edge.Attributes["startPosition"];
+
+            if (attr == null)
+            {
+                attr = xmlDoc.CreateAttribute("startPosition");
+                edge.Attributes.Append(attr);
+            }
+
+            // Assign position (right, bottom, top) in order
+            attr.Value = positions[i % positions.Length];
+        }
+    }
+
+    return xmlDoc;
+}
+```
+
+**Why Gateway Adjustment Matters:**
+Gateways (decision points) often have multiple outgoing arrows. Without position adjustment, all arrows might emanate from the same point, creating visual clutter. This algorithm distributes arrows to right, bottom, and top positions for clarity.
+
+**Arrow Processing with Scaling:**
+
+```csharp
+foreach (XmlNode bpmnEdge in bpmnArrows)
+{
+    try
+    {
+        string arrowName = bpmnEdge.Attributes["id"]?.Value;
+        string startElement = bpmnEdge.Attributes["startElement"]?.Value;
+        string startPosition = bpmnEdge.Attributes["startPosition"]?.Value;
+        string targetElement = bpmnEdge.Attributes["targetElement"]?.Value;
+        string targetPosition = bpmnEdge.Attributes["targetPosition"]?.Value;
+
+        if (string.IsNullOrEmpty(startElement)) continue;
+
+        GameObject startGO = GameObject.Find(startElement);
+        if (startGO == null || IsStaticElement(startElement)) continue;
+
+        createNewArrow arrowComp =
+            startGO.GetComponentInChildren<createNewArrow>();
+        if (arrowComp == null) continue;
+
+        if (arrowComp.elementArrows == null)
+            arrowComp.elementArrows = new List<arrow>();
+
+        List<vertexPosition> positions = new List<vertexPosition>();
+
+        foreach (XmlNode pos in bpmnEdge.ChildNodes)
+        {
+            // ✅ Apply scale factor to arrow waypoints
+            float vx = float.Parse(pos.Attributes["x"].Value) * scaleFactor;
+            float vy = float.Parse(pos.Attributes["y"].Value) * scaleFactor;
+            positions.Add(new vertexPosition(positions.Count, vx, vy));
+        }
+
+        arrow newArrow = new arrow(
+            arrowName,
+            startElement,
+            startPosition,
+            targetElement,
+            targetPosition,
+            positions
+        );
+
+        arrowComp.elementArrows.Add(newArrow);
+    }
+    catch (System.Exception ex)
+    {
+        Debug.LogError("❗ Error processing BPMN edge: " + ex.Message);
+        Debug.Log($"📐 Diagram scaling applied with factor {scaleFactor}");
+    }
+}
+```
+
+**Prefab Path Resolution:**
+**Note that if Prefab are not configured properly, it affects rendering process**
+
+```csharp
+private string GetPrefabPath(string elementType)
+{
+    string type = elementType.ToLower();
+
+    if (type.Contains("event"))
+        return $"BPMN Engine Assets/Events/{elementType}";
+    else if (type.Contains("gateway"))
+        return $"BPMN Engine Assets/Gateways/{elementType}";
+    else if (type == "textholder")
+        return $"BPMN Engine Assets/{elementType}";
+    else if (type.Contains("arrow"))
+        return $"BPMN Engine Assets/Arrows/{elementType}";
+    else
+        return $"BPMN Engine Assets/Tasks/{elementType}";
+}
+```
+
+**Static Element Filtering:**
+
+```csharp
+private bool IsStaticElement(string elementId)
+{
+    string id = elementId.ToLower();
+    return id.Contains("pool") ||
+           id.Contains("lane") ||
+           id.Contains("textholder");
+}
+```
+
+Static elements (pools, lanes, text holders) don't emit arrows, so they're filtered out during arrow processing to avoid errors.
+
+### 4.3 XML Processing Pipeline
+
+**BPMN XML Structure:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
 <root>
-  <bpmnElement elementID="task1" elementText="Send Email">
-    <accesscontrol required="true"/>
-    <privacy required="false"/>
-    <integrity required="false"/>
-    <accountability required="false"/>
-    <attackharm required="false"/>
-    <availability required="false"/>
+  <BPMNShape bpmnElement="startEvent" id="start_1" text="Start">
+    <Bounds height="80" width="80" x="100" y="200"/>
+  </BPMNShape>
+
+  <BPMNShape type="userTask" id="task_1" text="Review Order">
+    <Bounds height="60" width="100" x="250" y="200"/>
+  </BPMNShape>
+
+  <BPMNShape type="exclusiveGateway" id="gateway_1" text="">
+    <Bounds height="50" width="50" x="400" y="200"/>
+  </BPMNShape>
+
+  <BPMNEdge id="flow_1" startElement="start_1"
+           startPosition="locationRight"
+           targetElement="task_1"
+           targetPosition="locationLeft">
+    <waypoint x="180" y="240"/>
+    <waypoint x="250" y="240"/>
+  </BPMNEdge>
+
+  <BPMNEdge id="flow_2" startElement="task_1"
+           startPosition="locationRight"
+           targetElement="gateway_1"
+           targetPosition="locationLeft">
+    <waypoint x="350" y="240"/>
+    <waypoint x="400" y="240"/>
+  </BPMNEdge>
+</root>
+```
+
+**Parsing Flow:**
+
+```
+XML String (from DiagramHandler)
+        ↓
+XmlDocument.LoadXml()
+        ↓
+GetElementsByTagName("BPMNShape")
+GetElementsByTagName("BPMNEdge")
+        ↓
+For each BPMNShape:
+  - Extract attributes (type, id, text)
+  - Parse <Bounds> child (height, width, x, y)
+  - Apply scaling (loadLLMDiagram only)
+  - Normalize type
+  - Resolve prefab path
+  - Instantiate GameObject
+  - Position and scale
+        ↓
+For each BPMNEdge:
+  - Extract attributes (id, startElement, targetElement, positions)
+  - Parse <waypoint> children
+  - Apply scaling (loadLLMDiagram only)
+  - Create arrow object
+  - Add to source element's arrow list
+        ↓
+Complete diagram rendered in Unity scene
+```
+
+### 4.4 Dynamic Prefab Instantiation
+
+**Prefab Organization:**
+
+```
+Resources/
+  └── BPMN Engine Assets/
+      ├── Events/
+      │   ├── startEvent.prefab
+      │   ├── endEvent.prefab
+      │   ├── intermediateEvent.prefab
+      │   └── boundaryEvent.prefab
+      │
+      ├── Tasks/
+      │   ├── businessTask.prefab
+      │   ├── userTask.prefab
+      │   ├── serviceTask.prefab
+      │   ├── scriptTask.prefab
+      │   ├── manualTask.prefab
+      │   ├── receiveTask.prefab
+      │   └── mailTask.prefab
+      │
+      ├── Gateways/
+      │   ├── exclusiveGateway.prefab
+      │   ├── parallelGateway.prefab
+      │   ├── inclusiveGateway.prefab
+      │   └── eventBasedGateway.prefab
+      │
+      └── Arrows/
+          ├── sequenceFlow.prefab
+          └── messageFlow.prefab
+```
+
+**Instantiation Process:**
+
+```csharp
+// 1. Determine prefab path based on element type
+string prefabPath = GetPrefabPath(elementType);
+// Example: "BPMN Engine Assets/Tasks/userTask"
+
+// 2. Load prefab from Resources
+Object prefab = Resources.Load(prefabPath);
+
+// 3. Validate prefab exists
+if (prefab == null)
+{
+    Debug.LogError($"Prefab not found: {prefabPath}");
+    continue;
+}
+
+// 4. Instantiate GameObject
+GameObject BPMNShape = Instantiate(prefab) as GameObject;
+
+// 5. Configure GameObject
+BPMNShape.name = ID;  // Set unique identifier
+BPMNShape.transform.position = new Vector3(x, y_offset, y);
+BPMNShape.transform.localScale = new Vector3(width, height, 1);
+
+// 6. Set text label
+Text label = BPMNShape.GetComponentInChildren<Text>();
+if (label != null) label.text = elementText;
+```
+
+---
+
+## 5. Unity Frontend Layer
+
+### 5.1 DiagramHandler
+
+**File Location:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/DiagramHandler.cs` (889 lines)
+
+**Purpose:**
+Central repository for diagram data using static variables. Acts as a singleton-like data store accessible from all components.
+
+**Key Static Variables:**
+
+```csharp
+public static string BPMNDiagramData;        // Current BPMN XML
+public static string AdjustedBPMNData;       // Scaled/adjusted XML (from loadLLMDiagram)
+public static XmlDocument BPMNDoc;           // Parsed XML document
+public static string securityRequirements;   // Security ontology XML
+```
+
+**Core Methods:**
+
+```csharp
+public void getDiagrams()
+{
+    // Fetch diagrams from IONOS server
+    // Implements pagination (10 items per page)
+}
+
+public void SecurityDiagrams()
+{
+    // Fetch security diagrams from server
+}
+
+public void ParseBPMN()
+{
+    // Parse and load selected BPMN diagram
+}
+
+public void BPMNClickHandler()
+{
+    // Handle diagram selection clicks
+}
+```
+
+**Pagination Implementation:**
+
+```csharp
+private int currentPage = 0;
+private const int itemsPerPage = 10;
+
+public void getDiagrams()
+{
+    int startIndex = currentPage * itemsPerPage;
+    int endIndex = startIndex + itemsPerPage;
+
+    // Fetch items [startIndex, endIndex) from server
+}
+```
+
+### 5.2 SaveHandler
+
+**File Location:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/SaveHandler.cs` (322 lines)
+
+**Purpose:**
+Manages diagram persistence including screenshot capture and XML serialization.
+
+**Key Methods:**
+
+```csharp
+public void tSaveBPMN()
+{
+    // Trigger BPMN save workflow
+}
+
+public void saveBPMN()
+{
+    // Save BPMN diagram to IONOS server
+    // Includes screenshot capture
+}
+
+public void saveSecurity()
+{
+    // Save security diagram
+}
+
+public void saveRequirements()
+{
+    // Save security requirements
+}
+```
+
+**Screenshot Capture Workflow:**
+
+```csharp
+// 1. Position camera to capture diagram
+Camera.main.transform.position = CalculateCenterPoint();
+Camera.main.orthographicSize = CalculateOptimalZoom();
+
+// 2. Capture screenshot
+ScreenCapture.CaptureScreenshot("diagram_preview.png");
+
+// 3. Wait for file write
+yield return new WaitForSeconds(0.5f);
+
+// 4. Read screenshot and convert to base64
+byte[] imageBytes = File.ReadAllBytes("diagram_preview.png");
+string base64Image = Convert.ToBase64String(imageBytes);
+
+// 5. Include in save request
+```
+
+### 5.3 Login System
+
+**File Location:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/Login.cs` (212 lines)
+
+**Purpose:**
+User authentication against IONOS server with server toggle support.
+
+**Server Configuration:**
+
+```csharp
+public class ServerConnection
+{
+    public static string localhostServer = "http://localhost/cyberd3sign/";
+    public static string productionServer = "https://cyberd3sign.com/";
+
+    public static string currentServer = productionServer;
+}
+```
+
+**Authentication Flow:**
+
+```csharp
+public void LoginUser(string username, string password)
+{
+    string url = ServerConnection.currentServer + "login.php";
+
+    WWWForm form = new WWWForm();
+    form.AddField("username", username);
+    form.AddField("password", password);
+
+    UnityWebRequest request = UnityWebRequest.Post(url, form);
+
+    yield return request.SendWebRequest();
+
+    if (request.result == UnityWebRequest.Result.Success)
+    {
+        LoginResponse response = JsonUtility.FromJson<LoginResponse>(
+            request.downloadHandler.text
+        );
+
+        if (response.success)
+        {
+            SessionManager.userId = response.userId;
+            SessionManager.username = response.username;
+            SceneManager.LoadScene("MainScene");
+        }
+    }
+}
+```
+
+### 5.4 Security Analysis and Visualization
+
+**File Location:** `CyberD3signUnity/Assets/Scripts/DrawElements.cs` (Lines 169-299)
+
+**Purpose:**
+Visualizes security requirements by rendering security symbols above BPMN elements based on XML data from LLM analysis.
+
+**Security Analysis Flow:**
+
+Security analysis in CyberD3sign works through the following integrated pipeline:
+
+1. **User Request** → GPTManager detects "suggest_security" intent
+2. **LLM Analysis** → FastAPI backend `/suggest_security` analyzes BPMN
+3. **XML Generation** → GPTManager converts ontology paths to hierarchical XML
+4. **Storage** → XML stored in `DiagramHandler.securityRequirements`
+5. **Visualization** → DrawElements.DrawBPMNSecurity() renders security symbols
+
+**DrawBPMNSecurity Method:**
+
+```csharp
+public void DrawBPMNSecurity()
+{
+    // Clear existing security visualizations
+    foreach (taskSecurityLines tsl in taskLines)
+    {
+        Destroy(tsl.getLine());
+    }
+    taskLines.Clear();
+
+    foreach (symbol s in taskSymbols)
+    {
+        Destroy(s.getLine());
+        Destroy(s.getSecuritySymbol());
+        Destroy(s.getTask());
+    }
+    taskSymbols.Clear();
+
+    // Load security requirements XML
+    XmlDocument xmlDoc = new XmlDocument();
+
+    if (!string.IsNullOrEmpty(DiagramHandler.securityRequirements))
+    {
+        xmlDoc.LoadXml(DiagramHandler.securityRequirements);
+
+        // Process each TaskSecurityHolder
+        XmlNodeList securityHolder = xmlDoc.GetElementsByTagName("TaskSecurityHolder");
+
+        foreach (XmlNode securityLine in securityHolder)
+        {
+            string taskID = securityLine.Attributes["TaskID"].Value;
+
+            // Find corresponding BPMN element
+            GameObject bpmnObject = GameObject.Find(taskID);
+
+            if (bpmnObject != null)
+            {
+                // Calculate position for security line and symbols
+                Vector3 pos1 = new Vector3(
+                    bpmnObject.transform.position.x +
+                    (bpmnObject.GetComponent<Renderer>().bounds.size.x / 2),
+                    bpmnObject.transform.position.y,
+                    bpmnObject.transform.position.z - 4
+                );
+                Vector3 pos2 = new Vector3(
+                    pos1.x,
+                    pos1.y + 390,  // Vertical line height
+                    pos1.z
+                );
+
+                // Draw vertical line above element
+                taskLines.Add(new taskSecurityLines(taskID, pos1, pos2));
+
+                // Render security symbols hierarchically (4 levels)
+                foreach (XmlNode level1 in securityLine.ChildNodes)
+                {
+                    // Level 1: accesscontrol, privacy, integrity, etc.
+                    taskSymbols.Add(new symbol(
+                        level1.Name, taskID, pos1.x, -pos1.z
+                    ));
+
+                    foreach (XmlNode level2 in level1.ChildNodes)
+                    {
+                        // Level 2: confidentiality, authentication, etc.
+                        taskSymbols.Add(new symbol(
+                            level2.Name, taskID, pos1.x, -pos1.z
+                        ));
+
+                        foreach (XmlNode level3 in level2.ChildNodes)
+                        {
+                            // Level 3: encryption, access_control, etc.
+                            taskSymbols.Add(new symbol(
+                                level3.Name, taskID, pos1.x, -pos1.z
+                            ));
+
+                            foreach (XmlNode level4 in level3.ChildNodes)
+                            {
+                                // Level 4: AES256, RSA, etc.
+                                taskSymbols.Add(new symbol(
+                                    level4.Name, taskID, pos1.x, -pos1.z
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        // Initialize empty security XML structure
+        XmlElement elemRoot = (XmlElement)xmlDoc.AppendChild(
+            xmlDoc.CreateElement("ParentTaskSecurityHolder")
+        );
+        DiagramHandler.securityRequirements = xmlDoc.ToString();
+        DiagramHandler.reqDoc = xmlDoc;
+    }
+}
+```
+
+**Security Symbol Hierarchy:**
+
+The system renders security requirements as a 4-level hierarchy of visual symbols:
+
+- **Level 1**: Main categories (accesscontrol, privacy, integrity, accountability, attackharm, availability)
+- **Level 2**: Sub-categories (confidentiality, authentication, etc.)
+- **Level 3**: Specific controls (encryption, access_control, etc.)
+- **Level 4**: Implementation details (AES256, RSA, SHA256, etc.)
+
+Each level is rendered as a stacked symbol above the BPMN element, connected by a vertical line.
+
+---
+
+## 6. Python FastAPI Backend (IONOS Cloud Server)
+
+**Location:** `backend_server_IONOS/bpmn_assistant_cyber3d-main/`
+
+The FastAPI backend on the IONOS Cloud server uses a sophisticated **template-based prompt engineering system** combined with LLM intelligence to generate BPMN diagrams and security analysis. It does NOT use simple prompts alone - instead, it leverages:
+
+1. **Jinja2 Template System** - Structured prompt templates with examples
+2. **JSON Schema Definitions** - Strict BPMN representation format
+3. **Example-Based Learning** - Few-shot learning with BPMN examples
+4. **Ontology Templates** - Pre-defined security taxonomy (XML-based)
+5. **Multi-Provider LLM Facade** - Abstraction over OpenAI, Anthropic, Google, Fireworks
+
+### 6.1 Backend Architecture Overview
+
+**File Structure:**
+```
+backend_server_IONOS/bpmn_assistant_cyber3d-main/
+├── src/bpmn_assistant/
+│   ├── app.py                          # FastAPI main application
+│   ├── prompts/                        # Jinja2 prompt templates
+│   │   ├── create_bpmn.jinja2         # BPMN generation template
+│   │   ├── bpmn_representation.jinja2  # JSON schema definition
+│   │   ├── bpmn_examples.jinja2       # Few-shot learning examples
+│   │   ├── determine_intent.jinja2    # Intent classification
+│   │   └── edit_bpmn.jinja2           # BPMN modification template
+│   ├── services/                       # Business logic
+│   │   ├── bpmn_modeling_service.py   # BPMN creation/editing
+│   │   ├── bpmn_xml_generator.py      # JSON → XML conversion
+│   │   ├── bpmn_json_generator.py     # XML → JSON conversion
+│   │   └── determine_intent.py        # Intent classification
+│   ├── core/                           # Core components
+│   │   ├── llm_facade.py              # LLM provider abstraction
+│   │   ├── provider_factory.py        # Provider selection
+│   │   └── provider_impl/             # Provider implementations
+│   └── ontology_template.xml          # Security taxonomy (6 categories)
+```
+
+### 6.2 BPMN Generation: How It Actually Works
+
+**Question:** Does it use only prompts or are there templates?
+
+**Answer:** It uses a **sophisticated template-based system** with structured examples. Here's exactly how:
+
+#### Step-by-Step BPMN Generation Process:
+
+**1. User Request Received**
+```
+POST /modify
+Body: {
+  "model": "gpt-4.1-nano",
+  "message_history": [{"role": "user", "content": "Create a loan approval process"}],
+  "process": null
+}
+```
+
+**2. Load Jinja2 Template** (`prompts/create_bpmn.jinja2`)
+
+The system loads a structured template that includes:
+- **JSON Schema** for BPMN representation
+- **Multiple Examples** for few-shot learning
+- **Conversation History** for context
+
+Template structure:
+```jinja2
+{% include 'bpmn_representation.jinja2' %}
+{% include 'bpmn_examples.jinja2' %}
+---
+Message history:
+{{ message_history }}
+
+Create a BPMN representation of the process described in the messages.
+```
+
+**3. BPMN Representation Schema** (`prompts/bpmn_representation.jinja2`)
+
+This defines the **exact JSON structure** the LLM must follow:
+
+```json
+{
+  "process": [
+    {
+      "type": "startEvent" | "endEvent" | "task" | "userTask" | "serviceTask"
+              | "exclusiveGateway" | "parallelGateway",
+      "id": String,
+      "label": String
+    }
+  ]
+}
+```
+
+**Task Types:**
+- `userTask` - Human interaction (reviewing, deciding, entering data)
+- `serviceTask` - Automated system actions (calculations, emails, database)
+- `task` - Generic task if not clearly classified
+
+**Gateway Types:**
+- `exclusiveGateway` - Decision point (if/else branching)
+  - Each branch has: condition, path, optional next
+  - Example: "If approved" vs "If rejected"
+- `parallelGateway` - Concurrent execution
+  - Multiple branches execute simultaneously
+  - Auto-synchronized at convergence point
+
+**4. Few-Shot Learning Examples** (`prompts/bpmn_examples.jinja2`)
+
+The template includes **5 complete BPMN examples** showing:
+
+**Example 1: Simple Sequential Process**
+```
+Description: "Student sends email to professor. Professor receives it.
+             If professor agrees, he replies."
+
+Generated JSON:
+{
+  "process": [
+    {"type": "startEvent", "id": "start"},
+    {"type": "userTask", "id": "task1", "label": "Send email to professor"},
+    {"type": "task", "id": "task2", "label": "Receive the email"},
+    {
+      "type": "exclusiveGateway",
+      "id": "exclusive1",
+      "label": "Professor agrees?",
+      "has_join": true,
+      "branches": [
+        {
+          "condition": "If the professor agrees",
+          "path": [{"type": "task", "id": "task3", "label": "Reply to the student"}]
+        },
+        {"condition": "If the professor does not agree", "path": []}
+      ]
+    },
+    {"type": "endEvent", "id": "end1"}
+  ]
+}
+```
+
+**Example 2: Parallel Gateway**
+```
+Description: "Manager sends mail to supplier and prepares documents.
+             At the same time, customer searches and picks up goods."
+
+Generated JSON:
+{
+  "process": [
+    {"type": "startEvent", "id": "start"},
+    {
+      "type": "parallelGateway",
+      "id": "parallel1",
+      "branches": [
+        [
+          {"type": "serviceTask", "id": "task1", "label": "Send mail to supplier"},
+          {"type": "task", "id": "task2", "label": "Prepare the documents"}
+        ],
+        [
+          {"type": "task", "id": "task3", "label": "Search for the goods"},
+          {"type": "task", "id": "task4", "label": "Pick up the goods"}
+        ]
+      ]
+    },
+    {"type": "endEvent", "id": "end1"}
+  ]
+}
+```
+
+**Example 3: Loop-Back Process**
+```
+Description: "Take exam. If score > 50%, record grade.
+             If fail, go back and retake exam."
+
+Shows: Loops using "next": "task1" to jump back
+```
+
+**Example 4: Nested Gateways**
+```
+Description: "If Option A, perform Task A, then if Sub-option 1, Task A1..."
+
+Shows: Gateways within gateway paths (nested decision trees)
+```
+
+**Example 5: Multiple End Events**
+```
+Description: "Process order. If valid, fulfill and deliver. If invalid, reject."
+
+Shows: Different end points for different outcomes
+```
+
+**5. LLM Processing**
+
+The complete prompt sent to LLM includes:
+1. **Full JSON schema** (types, structure, rules)
+2. **5 complete examples** (few-shot learning)
+3. **User conversation** (current request context)
+
+The LLM generates a JSON structure following the pattern.
+
+**6. Validation and Retry** (`services/validate_bpmn.py`)
+
+```python
+def validate_bpmn(process: list) -> None:
+    # Check required fields
+    # Validate element types
+    # Verify gateway structure
+    # Ensure start/end events exist
+
+    # If invalid, retry up to 3 times
+```
+
+**7. JSON to XML Conversion** (`services/bpmn_xml_generator.py`)
+
+Converts JSON to Unity-compatible BPMN XML:
+
+```python
+Input JSON:
+{
+  "type": "userTask",
+  "id": "task1",
+  "label": "Submit Application"
+}
+
+Output XML:
+<BPMNShape bpmnElement="userTask" id="task1" text="Submit Application">
+  <Bounds height="60" width="100" x="250" y="200"/>
+</BPMNShape>
+```
+
+**Automatic Layout Algorithm:**
+- Sequential tasks: 150 units apart horizontally
+- Gateways: Add vertical spacing for branches
+- Parallel paths: Offset vertically
+- Calculate positions based on graph structure
+
+### 6.3 Security Analysis: How It Actually Works
+
+**Question:** How does security analysis use templates and ontology?
+
+**Answer:** It uses a **pre-defined XML ontology template** + LLM analysis.
+
+#### Step-by-Step Security Analysis:
+
+**1. Load Ontology Template** (`ontology_template.xml`)
+
+This is a **comprehensive security taxonomy** with 6 main categories:
+
+```xml
+<root>
+  <bpmnElement>
+    <accesscontrol>
+      <authentication>
+        <persauthentication>
+          <credentials usernameRequired passwordRequired pinRequired/>
+          <smartcard contactless pinRequired_SC/>
+          <biometric biometricType/>
+        </persauthentication>
+        <networkauthentication>
+          <cryptprotocol protocol/>
+          <vpn/>
+        </networkauthentication>
+      </authentication>
+      <identification>
+        <trustlevel minimumLevel/>
+      </identification>
+      <authorisation>
+        <assetclassification>
+          <serviceclassification serviceLevel/>
+          <dataclassification dataLevel/>
+        </assetclassification>
+        <statetransition>
+          <bibamodel/>
+          <belllapadula/>
+        </statetransition>
+      </authorisation>
+    </accesscontrol>
+
+    <privacy>
+      <userconsent onceOnly everyTime>
+        <anonymity compulsoryAnonymity>
+          <pseudonymity compulsoryPseudonymity/>
+        </anonymity>
+        <datausage onceOnlyDataUsage everyTimeDataUsage/>
+      </userconsent>
+      <confidentiality>
+        <needtoknow/>
+        <encryption keyType size/>
+        <dataretention minimumRetention maximumRetention/>
+        <pki/>
+      </confidentiality>
+    </privacy>
+
+    <integrity>
+      <dataintegrity>
+        <hashfunction/>
+        <constraints>
+          <inputvalidation date numbersOnly textOnly noNumbers noText noSymbols/>
+        </constraints>
+      </dataintegrity>
+      <hardwareintegrity>
+        <physicalsecurity>
+          <personnel personnelRequired/>
+          <location barriers videoSurveillance alarm lighting/>
+        </physicalsecurity>
+        <assetmanagement>
+          <assetmaintenance maintenanceInterval/>
+          <assetregister description serialNumber purchaseDate/>
+        </assetmanagement>
+      </hardwareintegrity>
+      <personnelintegrity>
+        <roleassignment>
+          <bindingofduty/>
+          <separationofduty minimumEntities/>
+        </roleassignment>
+        <delegation forbidden/>
+      </personnelintegrity>
+      <softwareintegrity>
+        <immunity scanInterval/>
+        <patchmanagement patchScanInterval patchInstallTime/>
+        <sandbox/>
+      </softwareintegrity>
+    </integrity>
+
+    <accountability>
+      <nonrepudiation>
+        <digitalsignature/>
+      </nonrepudiation>
+      <audittrail userID timeStamp affectedEntity read write modify/>
+    </accountability>
+
+    <attackharm>
+      <vulnerabilityassessment>
+        <systemassessment systemInterval/>
+        <environmentassessment environmentInterval/>
+        <serviceassessment serviceInterval/>
+        <personnelassessment personnelInterval/>
+      </vulnerabilityassessment>
+      <honeypot>
+        <high-interaction/>
+        <low-interaction/>
+      </honeypot>
+      <firewall>
+        <networklayer/>
+        <applicationlayer/>
+      </firewall>
+      <intrusiondetection>
+        <statefulprotocol/>
+        <signaturebased/>
+        <anomalydetection/>
+      </intrusiondetection>
+    </attackharm>
+
+    <availability percentage monthlyDowntime>
+      <databackup minimumDataBackups backupFrequency>
+        <localbackup minimumLocalBackups/>
+        <onlinebackup minimumOnlineBackups/>
+      </databackup>
+      <servicebackup minimumServiceBackups/>
+      <personnelbackup minimumPersonnelBackups/>
+      <hardwarebackup minimumHardwareBackups/>
+    </availability>
   </bpmnElement>
 </root>
 ```
 
-### 2.3 Data Models
+**2. Extract All Ontology Paths** (`app.py:suggest_security`)
 
-#### BPMNDiagram Class
-```csharp
-public class BPMNDiagram
-{
-    public string _name;          // Diagram filename
-    public string _data;          // BPMN XML content
-    public string _lastEdited;    // Timestamp (YYYY-MM-DD HH:MM)
-    public string _lastUser;      // Username
-}
-```
-
-#### SecurityDiagram Class
-```csharp
-public class SecurityDiagram
-{
-    public string _name;          // Security diagram filename
-    public string _data;          // Security diagram XML
-    public string _requirements;  // Requirements XML
-    public string _bpmn;          // Associated BPMN filename
-    public string _lastEdited;    // Timestamp
-    public string _lastUser;      // Username
-}
-```
-
-#### elementSaveDetails Class
-```csharp
-public class elementSaveDetails
-{
-    public string id;             // Element ID
-    public string type;           // task, gateway, event, etc.
-    public Vector3 position;      // 3D position
-    public string text;           // Label text
-    // Additional BPMN properties
-}
-```
-
----
-
-## 3. Backend Architecture (FastAPI + IONOS)
-
-### 3.1 FastAPI Server Architecture
-
-**Location:** `backend_server_IONOS/bpmn_assistant_cyber3d-main/src/bpmn_assistant/app.py`
-
-#### 3.1.1 API Endpoints
-
-| Endpoint | Method | Purpose | Request Model | Response |
-|----------|--------|---------|---------------|----------|
-| `/bpmn_to_json` | POST | Convert BPMN XML to JSON | `BpmnToJsonRequest` | JSON diagram structure |
-| `/available_providers` | GET | List available LLM providers | None | `{"openai": bool, "anthropic": bool, ...}` |
-| `/determine_intent` | POST | Classify user intent | `DetermineIntentRequest` | `{"intent": str, "confidence": float}` |
-| `/modify` | POST | Create/edit BPMN diagram | `ModifyBpmnRequest` | `{"bpmn_xml": str, "bpmn_json": dict}` |
-| `/talk` | POST | Conversational response | `ConversationalRequest` | `{"message": str}` |
-| `/suggest_security` | POST | AI security suggestions | `SuggestSecurityRequest` | `{"explanation": str, "security_ontologies": list}` |
-
-#### 3.1.2 Request Models (Pydantic)
-
-**BpmnToJsonRequest:**
 ```python
-class BpmnToJsonRequest(BaseModel):
-    bpmn_xml: str
-```
-
-**DetermineIntentRequest:**
-```python
-class DetermineIntentRequest(BaseModel):
-    message_history: List[MessageItem]
-    model: str
-```
-
-**ModifyBpmnRequest:**
-```python
-class ModifyBpmnRequest(BaseModel):
-    message_history: List[MessageItem]
-    process: Optional[List[dict]]  # Existing BPMN JSON (for edits)
-    model: str
-```
-
-**SuggestSecurityRequest:**
-```python
-class SuggestSecurityRequest(BaseModel):
-    modified_bpmn_xml: str
-    model: str
-    message_history: List[MessageHistoryItem] = []
-```
-
-**MessageHistoryItem:**
-```python
-class MessageHistoryItem(BaseModel):
-    role: str    # "user" or "assistant"
-    content: str # Message text
-```
-
-#### 3.1.3 Service Layer Architecture
-
-```
-app.py (API Layer)
-    ↓
-Services Layer
-    ├── BpmnModelingService    (create_bpmn, edit_bpmn)
-    ├── BpmnJsonGenerator      (XML → JSON conversion)
-    ├── BpmnXmlGenerator       (JSON → XML conversion)
-    ├── ConversationalService  (LLM-powered chat)
-    └── determine_intent       (Intent classification)
-         ↓
-Core Layer
-    ├── LLMFacade              (Unified LLM interface)
-    ├── ProviderFactory        (Create provider instances)
-    └── Provider Implementations
-        ├── AnthropicProvider  (Claude SDK)
-        └── LiteLLMProvider    (OpenAI, Google, Fireworks)
-             ↓
-External LLM APIs
-```
-
-### 3.2 IONOS PHP Backend
-
-**Base URL:** `http://www.cyberd3sign.com` or `https://www.cyberd3sign.com`
-
-#### 3.2.1 PHP Endpoints
-
-| Endpoint | Method | Purpose | Request Fields | Response Format |
-|----------|--------|---------|----------------|-----------------|
-| `/database/UserMechanics/login.php` | POST | Authenticate user | `myform_user`, `myform_pass` | Plain text username or empty |
-| `/database/UserMechanics/username.php` | POST | Get user ID | `username` | User ID string |
-| `/database/UserMechanics/companyname.php` | POST | Get company name | `username` | Company name string |
-| `/database/UserMechanics/diagrams.php` | POST | Fetch BPMN diagrams | `username`, `company` | `name^data^lastEdit^lastUser~...` |
-| `/database/UserMechanics/securitydiagrams.php` | POST | Fetch security diagrams | `username`, `company` | `name^data^requirements^bpmn^lastEdit^lastUser~...` |
-| `/database/UserMechanics/savediagrams.php` | POST | Save new BPMN | `diagram`, `uID`, `diagramUI`, `company`, `username` | Empty on success, error text on failure |
-| `/database/UserMechanics/updatediagrams.php` | POST | Update existing BPMN | `diagram`, `uID`, `diagramUI`, `company`, `username` | Empty on success |
-| `/database/UserMechanics/savesecurity.php` | POST | Save new security | `diagram`, `uID`, `diagramUI`, `BPMNID`, `company`, `username`, `screenshot` (binary PNG) | Empty on success |
-| `/database/UserMechanics/updatesecurity.php` | POST | Update security | `diagram`, `uID`, `diagramUI`, `company`, `username`, `screenshot` | Empty on success |
-| `/database/UserMechanics/saverequirements.php` | POST | Save requirements | `diagram`, `uID`, `diagramUI`, `username` | Empty on success |
-| `/database/UserMechanics/deletebpmn.php` | POST | Delete BPMN | `name`, `userID` | Confirmation text |
-| `/database/UserMechanics/deletesecurityrequirements.php` | POST | Delete security | `name`, `userID` | Confirmation text |
-
-#### 3.2.2 Response Format
-
-**Pattern:** `field1^field2^field3~field1^field2^field3~...`
-
-- **Delimiter:** `^` separates fields within a record
-- **Record Separator:** `~` separates multiple records
-
-**BPMN Diagram Response:**
-```
-diagramName1^<xml>BPMN data</xml>^2024-10-15 14:30^john.doe~
-diagramName2^<xml>BPMN data</xml>^2024-10-14 09:15^jane.smith~
-```
-
-**Security Diagram Response:**
-```
-securityName1^<xml>securityData</xml>^<xml>requirements</xml>^bpmnName1^2024-10-15 16:45^john.doe~
-```
-
-#### 3.2.3 Database Schema (Inferred)
-
-**Users Table:**
-```sql
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(255) UNIQUE,
-    password_hash VARCHAR(255),
-    company VARCHAR(255),
-    created_at TIMESTAMP
-);
-```
-
-**BPMN Diagrams Table:**
-```sql
-CREATE TABLE bpmn_diagrams (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
-    company VARCHAR(255),
-    diagram_name VARCHAR(255),
-    diagram_xml LONGTEXT,
-    last_edited TIMESTAMP,
-    last_user VARCHAR(255),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-```
-
-**Security Diagrams Table:**
-```sql
-CREATE TABLE security_diagrams (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
-    company VARCHAR(255),
-    security_name VARCHAR(255),
-    security_xml LONGTEXT,
-    requirements_xml LONGTEXT,
-    bpmn_name VARCHAR(255),
-    screenshot BLOB,
-    last_edited TIMESTAMP,
-    last_user VARCHAR(255),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-```
-
----
-
-## 4. Function Call Chains
-
-### 4.1 User Login Flow
-
-```
-User enters credentials in Login.unity
-    ↓
-Login.cs :: LoginWrapper()
-    ↓
-Login.cs :: login() [Coroutine]
-    ↓
-WWWForm created with myform_user + myform_pass
-    ↓
-HTTP POST → UserSession.Instance.ServerConnection.BaseURL + "/database/UserMechanics/login.php"
-    ↓
-IONOS PHP: Validate credentials against MySQL database
-    ↓
-Response: Username string (success) or empty (failure)
-    ↓
-Login.cs :: if (!string.IsNullOrEmpty(formText))
-    ↓
-Login.currentUser = formText
-    ↓
-SceneManager.LoadScene("Menu")
-    ↓
-Menu scene loaded → DiagramHandler.getDiagrams() triggered
-```
-
-### 4.2 Loading BPMN Diagrams Flow
-
-```
-Menu.unity :: User clicks "Load BPMN"
-    ↓
-DiagramHandler.cs :: getDiagrams() [Coroutine]
-    ↓
-WWWForm with username + company
-    ↓
-HTTP POST → BaseURL + "/database/UserMechanics/diagrams.php"
-    ↓
-IONOS PHP: SELECT * FROM bpmn_diagrams WHERE company = ? AND user_id = ?
-    ↓
-Response: "name1^xmlData1^2024-10-15 14:30^john.doe~name2^xmlData2^..."
-    ↓
-DiagramHandler.cs :: ParseBPMN(string PHPReturn)
-    ↓
-Split by '~' → foreach entry
-    ↓
-Split by '^' → temp[0]=name, temp[1]=data, temp[2]=date, temp[3]=user
-    ↓
-bpmndiagramList.Add(new BPMNDiagram(temp[0], temp[1], temp[2], temp[3]))
-    ↓
-DiagramHandler.cs :: StartCoroutine(SecurityDiagrams())
-    ↓
-WWWForm with username + company
-    ↓
-HTTP POST → BaseURL + "/database/UserMechanics/securitydiagrams.php"
-    ↓
-IONOS PHP: SELECT * FROM security_diagrams WHERE company = ? AND user_id = ?
-    ↓
-Response: "name1^secXml^reqXml^bpmnName^date^user~..."
-    ↓
-DiagramHandler.cs :: ParseSecDiagrams(string PHPReturn)
-    ↓
-secdiagramList.Add(new SecurityDiagram(...))
-    ↓
-DiagramHandler.cs :: DisplayBPMNDiagrams() or DisplaySecurityDiagrams()
-    ↓
-UI populated with diagram names, last edit dates, and last users
-```
-
-### 4.3 Opening BPMN Diagram for Editing
-
-```
-User clicks BPMN diagram button in Menu
-    ↓
-DiagramHandler.cs :: BPMNClickHandler()
-    ↓
-EventSystem.current.currentSelectedGameObject.name → button index
-    ↓
-Find matching diagram in bpmndiagramList by name
-    ↓
-DiagramHandler.BPMNDiagramData = bpmndiagramList[i]._data
-DiagramHandler.BPMNFileName = bpmndiagramList[i]._name
-    ↓
-DiagramHandler.BPMNDoc.LoadXml(BPMNDiagramData)
-    ↓
-SaveHandler.elementSaveDetails.Clear()
-SaveHandler.sequenceFlows.Clear()
-    ↓
-SceneManager.LoadScene("BPMN")
-    ↓
-BPMN.unity loaded
-    ↓
-LoadElements.cs :: Start() or Awake()
-    ↓
-LoadElements.cs :: Reads DiagramHandler.BPMNDoc
-    ↓
-Parse XML → Extract BPMNShape elements
-    ↓
-foreach BPMNShape:
-    InstantiateBPMNElement(id, type, position, text)
-    ↓
-    GameObject.Instantiate(taskPrefab, position, rotation)
-    ↓
-    bpmnShapes.Add(new BPMNShape(...))
-    ↓
-DrawElements.cs :: DrawSequenceFlows()
-    ↓
-Render 3D connections between elements using LineRenderer
-```
-
-### 4.4 Saving BPMN Diagram
-
-```
-User clicks "Save" in BPMN.unity
-    ↓
-HUD.cs or SaveButton.cs :: OnSaveButtonClick()
-    ↓
-SaveHandler.tSaveBPMN()
-    ↓
-SaveHandler.bpmnDiagram = GetXMLAsString(DiagramHandler.BPMNDoc)
-    ↓
-SaveHandler.diagramUI = userInputFileName
-    ↓
-SaveHandler.saveDiagram = true
-    ↓
-SaveHandler.cs :: LateUpdate() detects saveDiagram == true
-    ↓
-SaveHandler.cs :: StartCoroutine(saveBPMN())
-    ↓
-Check if diagram exists in DiagramHandler.bpmndiagramList
-    ↓
-if NEW:
-    WWWForm with: diagram, uID, diagramUI, company, username
-    HTTP POST → BaseURL + "/database/UserMechanics/savediagrams.php"
-else EXISTING:
-    WWWForm with: diagram, uID, diagramUI, company, username
-    HTTP POST → BaseURL + "/database/UserMechanics/updatediagrams.php"
-    ↓
-IONOS PHP: INSERT or UPDATE in bpmn_diagrams table
-    ↓
-Response: Empty string (success) or error message
-    ↓
-SaveHandler.saveDiagram = false
-```
-
-### 4.5 AI Security Analysis Flow (Claude Direct Integration)
-
-```
-User selects BPMN element in Build.unity
-    ↓
-SecurityAnalysisUI.cs :: OnAnalyzeButtonClick()
-    ↓
-BPMNSecurityAnalyzer.cs :: AnalyzeElement(string elementId)
-    ↓
-Load DiagramHandler.BPMNDiagramData as XmlDocument
-    ↓
-Extract element node by ID: doc.SelectSingleNode($"//BPMNShape[@id='{elementId}']")
-    ↓
-BPMNSecurityAnalyzer.cs :: StartCoroutine(AnalyzeBPMNWithClaude(elementXml, elementId))
-    ↓
-BuildClaudePrompt(bpmnXml, elementId)
-    ↓
-Prompt includes:
-  - Security categories (accesscontrol, privacy, integrity, accountability, attackharm, availability)
-  - BPMN XML snippet
-  - JSON response format specification
-    ↓
-Create UnityWebRequest:
-  URL: https://api.anthropic.com/v1/messages
-  Headers: x-api-key, anthropic-version, Content-Type
-  Body: {"model": "claude-3-opus-20240229", "max_tokens": 4000, "messages": [...]}
-    ↓
-yield return request.SendWebRequest()
-    ↓
-Anthropic API: Claude processes BPMN + prompt
-    ↓
-Response JSON:
-{
-  "content": [{
-    "type": "text",
-    "text": "{\"elementId1\": {\"explanation\": \"...\", \"suggestedControls\": [...]}}"
-  }]
-}
-    ↓
-BPMNSecurityAnalyzer.cs :: ParseClaudeResponse(responseText)
-    ↓
-Extract JSON from "text" field
-    ↓
-Parse to Dictionary<string, List<string>>:
-  Key = elementId
-  Value = [control1, control2, ..., "_explanation:text"]
-    ↓
-BPMNSecurityAnalyzer.cs :: DisplaySuggestions(securitySuggestions, elementId)
-    ↓
-UI populated with:
-  - Element ID
-  - Explanation
-  - List of suggested controls
-    ↓
-User clicks "Apply"
-    ↓
-BPMNSecurityAnalyzer.cs :: ApplySuggestions()
-    ↓
-foreach control in suggestedControls[elementId]:
-    SecurityButtonPressed.securitySymbol = control
-    ApplySecurityToElement(elementId, control)
-        ↓
-        Update DiagramHandler.secDoc XML:
-        <bpmnElement elementID="{elementId}">
-          <accesscontrol required="true"/>
-          <privacy required="false"/>
-          ...
-        </bpmnElement>
-```
-
-### 4.6 AI BPMN Creation Flow (FastAPI Backend)
-
-**Note:** This flow is for the FastAPI backend integration (not currently visible in Unity frontend, but architecture exists)
-
-```
-User enters text: "Create a BPMN for user registration process"
-    ↓
-Unity → HTTP POST to FastAPI: /determine_intent
-    Body: {
-      "message_history": [{"role": "user", "content": "Create a BPMN..."}],
-      "model": "claude-sonnet-4-20250514"
-    }
-    ↓
-FastAPI app.py :: _determine_intent(request)
-    ↓
-utils.get_llm_facade(request.model)
-    ↓
-LLMFacade initialized:
-  - Detect provider from model string
-  - Load API key from environment
-  - Create provider instance (AnthropicProvider or LiteLLMProvider)
-    ↓
-services.determine_intent(llm_facade, message_history)
-    ↓
-LLM prompt: "Classify user intent: modify, suggest_security, or talk"
-    ↓
-LLM Response: {"intent": "modify", "confidence": 0.95}
-    ↓
-Unity receives: {"intent": "modify", "confidence": 0.95}
-    ↓
-Unity → HTTP POST to FastAPI: /modify
-    Body: {
-      "message_history": [{"role": "user", "content": "Create a BPMN..."}],
-      "process": null,
-      "model": "claude-sonnet-4-20250514"
-    }
-    ↓
-FastAPI app.py :: _modify(request)
-    ↓
-BpmnModelingService.create_bpmn(llm_facade, message_history)
-    ↓
-PromptTemplateProcessor.render_template("create_bpmn.jinja2", message_history)
-    ↓
-Prompt sent to LLM:
-  "Create a BPMN process in JSON format based on user request..."
-    ↓
-llm_facade.call(prompt, max_tokens=3000)
-    ↓
-LLMProvider.call(model, messages, max_tokens, temperature)
-    ↓
-if Provider == ANTHROPIC:
-    anthropic_provider.py :: call()
-    ↓
-    anthropic.messages.create(
-      model="claude-sonnet-4-20250514",
-      max_tokens=3000,
-      messages=[...],
-      response_format={"type": "json_object"}  # JSON mode
-    )
-    ↓
-    Claude API returns JSON:
-    {
-      "process": [
-        {"type": "startEvent", "id": "start1", "text": "Start"},
-        {"type": "task", "id": "task1", "text": "Register User"},
-        {"type": "endEvent", "id": "end1", "text": "End"},
-        ...
-      ]
-    }
-else if Provider == OPENAI/GOOGLE/FIREWORKS:
-    litellm_provider.py :: call()
-    ↓
-    litellm.completion(
-      model=model,
-      messages=[...],
-      response_format={"type": "json_object"}
-    )
-    ↓
-validate_bpmn(process)  # Ensure process structure is valid
-    ↓
-BpmnXmlGenerator.create_bpmn_xml(process)
-    ↓
-Convert JSON to BPMN XML:
-    <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
-      <process id="process1">
-        <startEvent id="start1" name="Start"/>
-        <task id="task1" name="Register User"/>
-        <endEvent id="end1" name="End"/>
-        <sequenceFlow sourceRef="start1" targetRef="task1"/>
-        <sequenceFlow sourceRef="task1" targetRef="end1"/>
-      </process>
-    </definitions>
-    ↓
-FastAPI Response:
-    {
-      "bpmn_xml": "<definitions>...</definitions>",
-      "bpmn_json": [...]
-    }
-    ↓
-Unity receives BPMN XML
-    ↓
-DiagramHandler.BPMNDoc.LoadXml(bpmn_xml)
-    ↓
-LoadElements.cs renders 3D BPMN diagram
-```
-
-### 4.7 Security Suggestions Flow (FastAPI Backend)
-
-```
-User has modified BPMN diagram
-    ↓
-Unity → HTTP POST to FastAPI: /suggest_security
-    Body: {
-      "modified_bpmn_xml": "<definitions>...</definitions>",
-      "model": "claude-sonnet-4-20250514",
-      "message_history": [...]
-    }
-    ↓
-FastAPI app.py :: suggest_security(request)
-    ↓
-Parse ontology_template.xml
-    ↓
-extract_paths_from_xml(ontology_root)
-    ↓
-Available ontologies:
-    [
-      "root/bpmnElement/accesscontrol/authentication/personal",
-      "root/bpmnElement/privacy/confidentiality/encryption",
-      ...
-    ]
-    ↓
-Build LLM prompt:
-    "You are a BPMN security assistant.
-     Here is the BPMN XML: {modified_bpmn_xml}
-     Available ontology paths: {available_ontologies}
-     Return JSON: {explanation: str, security_ontologies: [{elementID, elementText, ontology_path}]}"
-    ↓
-utils.send_prompt_to_llm(llm_facade, prompt)
-    ↓
-LLM processes BPMN + ontologies
-    ↓
-Response:
-    {
-      "explanation": "The BPMN requires authentication for user tasks...",
-      "security_ontologies": [
-        {
-          "elementID": "task1",
-          "elementText": "Login User",
-          "ontology_path": ["root/bpmnElement/accesscontrol/authentication"]
-        },
-        {
-          "elementID": "task2",
-          "elementText": "Store Data",
-          "ontology_path": ["root/bpmnElement/integrity/dataintegrity/hashfunction"]
-        }
-      ]
-    }
-    ↓
-FastAPI returns:
-    {
-      "explanation": "...",
-      "security_ontologies": [...],
-      "suggestions": [...],
-      "modification_log": [...]
-    }
-    ↓
-Unity receives suggestions
-    ↓
-SecurityRequirementsManager.cs :: ParseSecuritySuggestions(response)
-    ↓
-foreach ontology in security_ontologies:
-    Find element in DiagramHandler.reqDoc by elementID
-    ↓
-    if exists:
-        Set ontology path as "required=true"
+def extract_paths_from_xml(element, current_path="", paths=None):
+    path = f"{current_path}/{element.tag}"
+    if no_children:
+        paths.append(path)  # Leaf node - complete path
     else:
-        Create new bpmnElement node with ontology mappings
-    ↓
-DiagramHandler.reqDoc updated with security requirements
+        for child in children:
+            extract_paths_from_xml(child, path, paths)
+    return paths
+
+available_ontologies = [
+  "root/bpmnElement/accesscontrol/authentication/persauthentication/credentials",
+  "root/bpmnElement/accesscontrol/authentication/persauthentication/smartcard",
+  "root/bpmnElement/accesscontrol/authentication/persauthentication/biometric",
+  "root/bpmnElement/privacy/confidentiality/encryption",
+  "root/bpmnElement/integrity/dataintegrity/hashfunction",
+  "root/bpmnElement/accountability/audittrail",
+  ... // ~100+ paths extracted
+]
 ```
 
----
-
-## 5. Data Flow Analysis
-
-### 5.1 BPMN Diagram Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                       Data Source                                │
-├─────────────────────────────────────────────────────────────────┤
-│ IONOS MySQL Database                                             │
-│ - Table: bpmn_diagrams                                           │
-│ - Columns: id, user_id, company, diagram_name, diagram_xml,     │
-│            last_edited, last_user                                │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         PHP API (diagrams.php)
-                 │
-         Response: "name^xmlData^date^user~..."
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    Unity In-Memory Storage                       │
-├─────────────────────────────────────────────────────────────────┤
-│ DiagramHandler.bpmndiagramList (List<BPMNDiagram>)              │
-│   ├─ _name: "Process1"                                           │
-│   ├─ _data: "<definitions>...</definitions>"                    │
-│   ├─ _lastEdited: "2024-10-15 14:30"                            │
-│   └─ _lastUser: "john.doe"                                       │
-│                                                                  │
-│ DiagramHandler.BPMNDiagramData (static string)                  │
-│   └─ Currently selected BPMN XML                                │
-│                                                                  │
-│ DiagramHandler.BPMNDoc (static XmlDocument)                     │
-│   └─ Parsed XML document for editing                            │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         User selects diagram
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    BPMN Scene Rendering                          │
-├─────────────────────────────────────────────────────────────────┤
-│ LoadElements.cs                                                  │
-│   ├─ Parse BPMNDoc XML                                           │
-│   ├─ Extract: BPMNShape, BPMNEdge elements                       │
-│   └─ Instantiate 3D GameObjects                                 │
-│        ├─ Task prefabs                                           │
-│        ├─ Gateway prefabs                                        │
-│        ├─ Event prefabs                                          │
-│        └─ SequenceFlow LineRenderers                             │
-│                                                                  │
-│ SaveHandler.elementSaveDetails (List<elementSaveDetails>)       │
-│   └─ Tracks all active BPMN elements                            │
-│                                                                  │
-│ SaveHandler.sequenceFlows (List<sequenceFlow>)                  │
-│   └─ Tracks all connections                                     │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         User edits diagram (add/delete/move elements)
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    Save Process                                  │
-├─────────────────────────────────────────────────────────────────┤
-│ SaveHandler.tSaveBPMN()                                          │
-│   ├─ Iterate elementSaveDetails + sequenceFlows                 │
-│   ├─ Rebuild BPMNDoc XML from current state                     │
-│   └─ Convert to string: SaveHandler.bpmnDiagram                 │
-│                                                                  │
-│ SaveHandler.saveBPMN() [Coroutine]                              │
-│   ├─ WWWForm with diagram XML + metadata                        │
-│   └─ POST to IONOS PHP (savediagrams.php or updatediagrams.php) │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         HTTP POST
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    Persistence Layer                             │
-├─────────────────────────────────────────────────────────────────┤
-│ IONOS PHP Backend                                                │
-│   ├─ Validate user session                                       │
-│   ├─ if NEW: INSERT INTO bpmn_diagrams                          │
-│   └─ if UPDATE: UPDATE bpmn_diagrams SET diagram_xml = ...      │
-│                                                                  │
-│ MySQL Database                                                   │
-│   └─ BPMN XML stored as LONGTEXT                                │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### 5.2 Security Requirements Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                   Security Ontology Template                     │
-├─────────────────────────────────────────────────────────────────┤
-│ File: ontology_template.xml (FastAPI backend)                   │
-│ Structure:                                                       │
-│   root                                                           │
-│     └─ bpmnElement                                               │
-│         ├─ accesscontrol                                         │
-│         │   ├─ authentication                                    │
-│         │   │   ├─ personal                                      │
-│         │   │   ├─ network                                       │
-│         │   │   └─ biometric                                     │
-│         │   └─ authorization                                     │
-│         ├─ privacy                                               │
-│         │   ├─ userconsent                                       │
-│         │   └─ confidentiality                                   │
-│         │       ├─ encryption                                    │
-│         │       └─ keymanagement                                 │
-│         ├─ integrity                                             │
-│         ├─ accountability                                        │
-│         ├─ attackharm                                            │
-│         └─ availability                                          │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         User requests security analysis
-                 │
-         Unity → FastAPI /suggest_security
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    LLM Security Analysis                         │
-├─────────────────────────────────────────────────────────────────┤
-│ FastAPI suggest_security()                                       │
-│   ├─ Extract ontology paths                                     │
-│   ├─ Build prompt with BPMN XML + available ontologies          │
-│   └─ LLM (Claude/GPT) analyzes BPMN elements                    │
-│                                                                  │
-│ LLM Response:                                                    │
-│   {                                                              │
-│     "explanation": "Login task requires authentication...",     │
-│     "security_ontologies": [                                     │
-│       {                                                          │
-│         "elementID": "task1",                                    │
-│         "elementText": "User Login",                             │
-│         "ontology_path": [                                       │
-│           "root/bpmnElement/accesscontrol/authentication"       │
-│         ]                                                        │
-│       }                                                          │
-│     ]                                                            │
-│   }                                                              │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         FastAPI → Unity JSON response
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                Unity Security Requirements                       │
-├─────────────────────────────────────────────────────────────────┤
-│ DiagramHandler.reqDoc (XmlDocument)                              │
-│   <root>                                                         │
-│     <bpmnElement elementID="task1" elementText="User Login">    │
-│       <accesscontrol>                                            │
-│         <authentication>                                         │
-│           <personal required="true"/>                            │
-│           <network required="false"/>                            │
-│         </authentication>                                        │
-│       </accesscontrol>                                           │
-│       <privacy>                                                  │
-│         <confidentiality>                                        │
-│           <encryption required="true"/>                          │
-│         </confidentiality>                                       │
-│       </privacy>                                                 │
-│     </bpmnElement>                                               │
-│   </root>                                                        │
-│                                                                  │
-│ DiagramHandler.securityRequirements (static string)             │
-│   └─ XML string version of reqDoc                               │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         User saves security requirements
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    Save to Database                              │
-├─────────────────────────────────────────────────────────────────┤
-│ SaveHandler.tSaveRequirements()                                  │
-│   └─ Convert reqDoc to string                                   │
-│                                                                  │
-│ SaveHandler.saveRequirements() [Coroutine]                      │
-│   ├─ WWWForm with requirements XML                              │
-│   └─ POST to IONOS PHP (saverequirements.php)                   │
-│                                                                  │
-│ IONOS Database                                                   │
-│   └─ security_diagrams.requirements_xml = LONGTEXT              │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### 5.3 User Session State Management
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Application Startup                           │
-├─────────────────────────────────────────────────────────────────┤
-│ Login.unity scene loads                                          │
-│   ↓                                                              │
-│ UserSession.cs (Singleton)                                       │
-│   - Persists across scenes (DontDestroyOnLoad)                  │
-│   - Stores ServerConnection object                              │
-│   ↓                                                              │
-│ ServerConnection.cs                                              │
-│   - s_localHost: "http://localhost"                             │
-│   - s_cyberD3sign: "http://www.cyberd3sign.com"                 │
-│   - s_cyberD3signHTTPS: "https://www.cyberd3sign.com"           │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         User logs in
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    Session Initialization                        │
-├─────────────────────────────────────────────────────────────────┤
-│ Login.cs :: login() successful                                   │
-│   ↓                                                              │
-│ Login.currentUser = "john.doe" (static string)                  │
-│   ↓                                                              │
-│ Menu scene loads                                                 │
-│   ↓                                                              │
-│ Menu.cs :: Start()                                               │
-│   - Fetch user ID from server                                   │
-│   - Fetch company name                                           │
-│   ↓                                                              │
-│ Menu.userID = "12345" (static string)                           │
-│ Menu.companyName = "Acme Corp" (static string)                  │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         All subsequent API calls include:
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    Request Context                               │
-├─────────────────────────────────────────────────────────────────┤
-│ WWWForm data:                                                    │
-│   - username: Menu.userID                                        │
-│   - company: Menu.companyName                                    │
-│   - username (display): Login.currentUser                        │
-│                                                                  │
-│ Server URL:                                                      │
-│   - UserSession.Instance.ServerConnection.BaseURL                │
-│                                                                  │
-│ Used by:                                                         │
-│   - DiagramHandler (load diagrams)                               │
-│   - SaveHandler (save diagrams)                                  │
-│   - All IONOS PHP API calls                                      │
-└──────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 6. LLM Integration Pipeline
-
-### 6.1 Multi-Provider Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Frontend Request                              │
-├─────────────────────────────────────────────────────────────────┤
-│ Unity → FastAPI: /modify or /suggest_security or /talk          │
-│   Body: {                                                        │
-│     "model": "claude-sonnet-4-20250514",                         │
-│     "message_history": [...],                                    │
-│     "process": {...}  (optional)                                 │
-│   }                                                              │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         FastAPI app.py
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                Provider Detection Layer                          │
-├─────────────────────────────────────────────────────────────────┤
-│ utils.get_llm_facade(model, output_mode)                         │
-│   ↓                                                              │
-│ Model string analysis:                                           │
-│   - "gpt-4.1" → Provider.OPENAI                                  │
-│   - "claude-*" → Provider.ANTHROPIC                              │
-│   - "gemini-*" → Provider.GOOGLE                                 │
-│   - "llama-*" or "qwen-*" → Provider.FIREWORKS_AI                │
-│   ↓                                                              │
-│ Load API key from .env:                                          │
-│   - OPENAI_API_KEY                                               │
-│   - ANTHROPIC_API_KEY                                            │
-│   - GEMINI_API_KEY                                               │
-│   - FIREWORKS_AI_API_KEY                                         │
-│   ↓                                                              │
-│ Return: LLMFacade(provider, api_key, model, output_mode)        │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         LLMFacade initialization
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                LLMFacade (Unified Interface)                     │
-├─────────────────────────────────────────────────────────────────┤
-│ llm_facade.py                                                    │
-│   ↓                                                              │
-│ __init__(provider, api_key, model, output_mode)                 │
-│   ↓                                                              │
-│ ProviderFactory.get_provider(provider, api_key, output_mode)    │
-│   ↓                                                              │
-│ self.provider = AnthropicProvider or LiteLLMProvider            │
-│ self.model = model string                                       │
-│ self.output_mode = OutputMode.JSON or OutputMode.TEXT           │
-│ self.messages = [] (conversation history)                       │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         Service layer calls llm_facade.call(prompt)
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                Provider-Specific Implementations                 │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│ ┌────────────────────────────────────────────────────────────┐ │
-│ │          AnthropicProvider (Claude)                         │ │
-│ ├────────────────────────────────────────────────────────────┤ │
-│ │ anthropic_provider.py                                       │ │
-│ │   ↓                                                         │ │
-│ │ import anthropic                                            │ │
-│ │ client = anthropic.Anthropic(api_key=api_key)              │ │
-│ │   ↓                                                         │ │
-│ │ call(model, messages, max_tokens, temperature):            │ │
-│ │   if output_mode == JSON:                                  │ │
-│ │     response = client.messages.create(                     │ │
-│ │       model=model,                                          │ │
-│ │       max_tokens=max_tokens,                                │ │
-│ │       temperature=temperature,                              │ │
-│ │       messages=messages,                                    │ │
-│ │       response_format={"type": "json_object"}              │ │
-│ │     )                                                       │ │
-│ │     return json.loads(response.content[0].text)            │ │
-│ │   else (TEXT mode):                                         │ │
-│ │     return response.content[0].text                        │ │
-│ └────────────────────────────────────────────────────────────┘ │
-│                                                                  │
-│ ┌────────────────────────────────────────────────────────────┐ │
-│ │     LiteLLMProvider (OpenAI, Google, Fireworks)            │ │
-│ ├────────────────────────────────────────────────────────────┤ │
-│ │ litellm_provider.py                                         │ │
-│ │   ↓                                                         │ │
-│ │ import litellm                                              │ │
-│ │ litellm.api_key = api_key                                  │ │
-│ │   ↓                                                         │ │
-│ │ call(model, messages, max_tokens, temperature):            │ │
-│ │   if output_mode == JSON:                                  │ │
-│ │     response = litellm.completion(                         │ │
-│ │       model=model,                                          │ │
-│ │       messages=messages,                                    │ │
-│ │       max_tokens=max_tokens,                                │ │
-│ │       temperature=temperature,                              │ │
-│ │       response_format={"type": "json_object"}              │ │
-│ │     )                                                       │ │
-│ │     return json.loads(response.choices[0].message.content) │ │
-│ │   else:                                                     │ │
-│ │     return response.choices[0].message.content             │ │
-│ │                                                             │ │
-│ │ Supported models:                                           │ │
-│ │   - gpt-4.1, gpt-4.1-mini, o4-mini (OpenAI)                │ │
-│ │   - gemini-2.5-flash, gemini-2.5-pro (Google)              │ │
-│ │   - llama-4-maverick, qwen-3-235b, deepseek-r1 (Fireworks) │ │
-│ └────────────────────────────────────────────────────────────┘ │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         API response
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                Response Processing                               │
-├─────────────────────────────────────────────────────────────────┤
-│ if OutputMode.JSON:                                              │
-│   - Provider returns Python dict                                │
-│   - Validated against expected schema                           │
-│   - Converted to JSON string for message history                │
-│                                                                  │
-│ if OutputMode.TEXT:                                              │
-│   - Provider returns plain string                               │
-│   - Used for conversational responses                           │
-│                                                                  │
-│ Message appended to llm_facade.messages:                        │
-│   {"role": "assistant", "content": response}                    │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         Return to FastAPI endpoint
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                FastAPI Response                                  │
-├─────────────────────────────────────────────────────────────────┤
-│ /modify → {"bpmn_xml": str, "bpmn_json": dict}                  │
-│ /suggest_security → {"explanation": str, "security_ontologies": │
-│ /talk → {"message": str}                                         │
-│ /determine_intent → {"intent": str, "confidence": float}         │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-         Unity receives JSON response
-                 ↓
-         Application logic continues
-```
-
-### 6.2 LLM Prompt Templates
-
-#### Create BPMN Prompt (create_bpmn.jinja2)
-
-```jinja2
-You are an expert in BPMN (Business Process Model and Notation).
-The user wants to create a BPMN process.
-
-Conversation history:
-{{ message_history }}
-
-Generate a BPMN process in JSON format with this structure:
-{
-  "process": [
-    {
-      "type": "startEvent",
-      "id": "start1",
-      "text": "Start",
-      "x": 100,
-      "y": 100
-    },
-    {
-      "type": "task",
-      "id": "task1",
-      "text": "Task Name",
-      "x": 250,
-      "y": 100
-    },
-    {
-      "type": "sequenceFlow",
-      "id": "flow1",
-      "sourceRef": "start1",
-      "targetRef": "task1"
-    },
-    ...
-  ]
-}
-
-Available element types:
-- startEvent, endEvent, intermediateEvent
-- task, userTask, serviceTask, sendTask, receiveTask
-- exclusiveGateway, parallelGateway, inclusiveGateway, eventBasedGateway
-- sequenceFlow
-
-Return ONLY the JSON object, no additional text.
-```
-
-#### Determine Intent Prompt
+**3. Build LLM Prompt with Ontology Paths**
 
 ```python
-# app.py lines 90-106
-confirm_prompt = f"""
-You are an intent classifier. The conversation so far is:
-
-{request.message_history}
-
-Rules:
-- If the user explicitly confirms applying security mappings (e.g., "yes", "apply", "confirm", "do it"), return:
-  {{ "intent": "modify_security", "confidence": 0.95 }}
-- If the user explicitly declines (e.g., "no", "skip", "not now"), return:
-  {{ "intent": "chat", "confidence": 0.9 }}
-- Otherwise, classify normally:
-  - if they want to edit/create BPMN → modify
-  - if they ask about security → suggest_security
-  - otherwise → talk
-
-Only return JSON with `intent` + `confidence`.
-"""
-```
-
-#### Security Suggestion Prompt
-
-```python
-# app.py lines 189-216
 prompt = f"""
 You are a BPMN security assistant.
 
@@ -1409,8 +2126,8 @@ The user provided this BPMN XML:
 These are the available ontology paths:
 {available_ontologies}
 
-First, provide a **short, brief and succinct explanation** of which parts of the BPMN need what kinds of security ontologies and why.
-And what you have added to the BPMN.
+First, provide a short explanation of which parts of the BPMN need
+what kinds of security ontologies and why.
 
 Then, return a JSON object with this exact structure:
 {{
@@ -1426,886 +2143,1551 @@ Then, return a JSON object with this exact structure:
 """
 ```
 
-### 6.3 Output Modes
+**4. LLM Analyzes BPMN Against Ontology**
 
-| Mode | Value | Purpose | Provider Handling |
-|------|-------|---------|-------------------|
-| JSON | `OutputMode.JSON` | Structured data (BPMN processes, security suggestions) | `response_format={"type": "json_object"}` |
-| TEXT | `OutputMode.TEXT` | Natural language responses (chat, explanations) | Standard text completion |
+The LLM:
+1. Reads the BPMN XML structure
+2. Identifies sensitive elements (payment, authentication, data storage)
+3. Maps each element to appropriate ontology paths
+4. Returns structured JSON
 
-**JSON Mode Enforcement:**
-- Anthropic: Uses `response_format` parameter
-- OpenAI/Google/Fireworks (via LiteLLM): Uses `response_format` parameter
-- Fallback: If provider doesn't support JSON mode, prompt engineering enforces JSON output
-
-### 6.4 Reasoning Model Replacement
-
-```python
-# utils.py lines 75-86
-def replace_reasoning_model(model: str) -> str:
-    """
-    Replaces reasoning models with more lightweight models.
-    Reasoning models (o4-mini, deepseek-r1, qwen-3) don't support JSON mode.
-    """
-    if model == OpenAIModels.O4_MINI.value:
-        return OpenAIModels.GPT_4_1_MINI.value
-    elif model in [FireworksAIModels.DEEPSEEK_R1.value, FireworksAIModels.QWEN_3_235B.value]:
-        return FireworksAIModels.LLAMA_4_MAVERICK.value
-    return model
-```
-
-**Reason:** Reasoning models (o4-mini, deepseek-r1) perform internal chain-of-thought which conflicts with structured JSON output mode.
-
----
-
-## 7. Security Framework
-
-### 7.1 Ontology Structure
-
-**File:** `ontology_template.xml` (FastAPI backend)
-
-```xml
-<root>
-  <bpmnElement>
-    <accesscontrol>
-      <authentication>
-        <personal/>         <!-- Username/password -->
-        <network/>          <!-- IP whitelisting -->
-        <biometric/>        <!-- Fingerprint, face -->
-        <cryptography/>     <!-- SSL/TLS certificates -->
-      </authentication>
-      <identification>
-        <trustlevel/>       <!-- High/medium/low -->
-      </identification>
-      <authorization>
-        <assetclassification/>  <!-- Public, confidential, secret -->
-      </authorization>
-    </accesscontrol>
-
-    <privacy>
-      <userconsent>
-        <anonymity/>
-        <pseudonymity/>
-      </userconsent>
-      <datausage/>
-      <confidentiality>
-        <encryption/>
-        <keymanagement/>
-        <dataretention/>
-        <pki/>              <!-- Public Key Infrastructure -->
-      </confidentiality>
-    </privacy>
-
-    <integrity>
-      <dataintegrity>
-        <hashfunction/>
-        <inputvalidation/>
-      </dataintegrity>
-      <hardwareintegrity>
-        <physicalsecurity/>
-        <assetmanagement/>
-      </hardwareintegrity>
-      <personnelintegrity>
-        <roleassignment/>
-        <delegation/>
-        <separationofduties/>
-      </personnelintegrity>
-      <softwareintegrity>
-        <antivirus/>
-        <patchmanagement/>
-        <sandboxing/>
-      </softwareintegrity>
-    </integrity>
-
-    <accountability>
-      <nonrepudiation>
-        <digitalsignature/>
-      </nonrepudiation>
-      <audittrails>
-        <userid/>
-        <timestamps/>
-        <accesslogs/>
-      </audittrails>
-    </accountability>
-
-    <attackharm>
-      <vulnerabilityassessment>
-        <systemvulnerability/>
-        <environmentvulnerability/>
-        <servicevulnerability/>
-        <personnelvulnerability/>
-      </vulnerabilityassessment>
-      <honeypots>
-        <highinteraction/>
-        <lowinteraction/>
-      </honeypots>
-      <firewall>
-        <networklayer/>
-        <applicationlayer/>
-      </firewall>
-      <intrusiondetection>
-        <stateful/>
-        <signaturebased/>
-        <anomalydetection/>
-      </intrusiondetection>
-    </attackharm>
-
-    <availability>
-      <databackup>
-        <localbackup/>
-        <onlinebackup/>
-      </databackup>
-      <servicebackup/>
-      <personnelbackup/>
-      <hardwarebackup/>
-    </availability>
-  </bpmnElement>
-</root>
-```
-
-### 7.2 Security Requirement Mapping
-
-**Process:**
-1. LLM analyzes BPMN element (e.g., "User Login" task)
-2. Suggests ontology paths:
-   - `root/bpmnElement/accesscontrol/authentication/personal`
-   - `root/bpmnElement/privacy/confidentiality/encryption`
-3. Unity creates XML structure in `DiagramHandler.reqDoc`:
-
-```xml
-<root>
-  <bpmnElement elementID="task_login" elementText="User Login">
-    <accesscontrol>
-      <authentication>
-        <personal required="true"/>
-        <network required="false"/>
-        <biometric required="false"/>
-      </authentication>
-    </accesscontrol>
-    <privacy>
-      <confidentiality>
-        <encryption required="true"/>
-        <keymanagement required="false"/>
-      </confidentiality>
-    </privacy>
-    <integrity>
-      <dataintegrity>
-        <inputvalidation required="true"/>
-      </dataintegrity>
-    </integrity>
-  </bpmnElement>
-</root>
-```
-
-### 7.3 Security Visualization
-
-**Unity Build.unity Scene:**
-- Each BPMN element displays security category icons
-- Color-coded indicators:
-  - Green: Required security controls applied
-  - Yellow: Suggested but not applied
-  - Red: Missing critical security requirements
-
-**Data Binding:**
-```csharp
-// SecurityRequirementsManager.cs (pseudocode)
-foreach (var element in bpmnElements)
+**Example LLM Response:**
+```json
 {
-    XmlNode reqNode = DiagramHandler.reqDoc.SelectSingleNode($"//bpmnElement[@elementID='{element.id}']");
-
-    if (reqNode != null)
+  "explanation": "Payment processing requires encryption and authentication.
+                  User verification needs biometric authentication.
+                  Order data needs integrity checks.",
+  "security_ontologies": [
     {
-        // Check accesscontrol
-        bool hasAuth = reqNode.SelectSingleNode("accesscontrol/authentication/*[@required='true']") != null;
-        element.SetSecurityIcon("accesscontrol", hasAuth);
-
-        // Check privacy
-        bool hasPrivacy = reqNode.SelectSingleNode("privacy/*[@required='true']") != null;
-        element.SetSecurityIcon("privacy", hasPrivacy);
-
-        // ... (repeat for all 6 categories)
+      "elementID": "task_payment",
+      "elementText": "Process Payment",
+      "ontology_path": [
+        "root/bpmnElement/privacy/confidentiality/encryption",
+        "root/bpmnElement/accesscontrol/authentication/persauthentication/credentials",
+        "root/bpmnElement/accountability/audittrail"
+      ]
+    },
+    {
+      "elementID": "task_verify",
+      "elementText": "Verify User",
+      "ontology_path": [
+        "root/bpmnElement/accesscontrol/authentication/persauthentication/biometric",
+        "root/bpmnElement/accountability/nonrepudiation/digitalsignature"
+      ]
     }
-}
-```
-
----
-
-## 8. Network Communication
-
-### 8.1 Unity → IONOS PHP Communication
-
-**Protocol:** HTTP/HTTPS
-**Method:** POST (WWWForm)
-**Encoding:** application/x-www-form-urlencoded
-
-**Example Request (saveBPMN):**
-```http
-POST http://www.cyberd3sign.com/database/UserMechanics/savediagrams.php HTTP/1.1
-Content-Type: application/x-www-form-urlencoded
-
-diagram=<definitions>...</definitions>&
-uID=12345&
-diagramUI=MyProcess&
-company=AcmeCorp&
-username=john.doe
-```
-
-**Response Format:**
-- Success: Empty string `""`
-- Error: Plain text error message
-
-**Unity Code:**
-```csharp
-// SaveHandler.cs lines 69-87
-WWWForm diagramform = new WWWForm();
-diagramform.AddField("diagram", bpmnDiagram);
-diagramform.AddField("uID", Menu.userID);
-diagramform.AddField("diagramUI", diagramUI);
-diagramform.AddField("company", Menu.companyName);
-diagramform.AddField("username", Login.currentUser);
-
-WWW post = new WWW(
-    UserSession.Instance.ServerConnection.BaseURL + "/database/UserMechanics/savediagrams.php",
-    diagramform
-);
-yield return post;
-
-string postDiagrams = post.text.Trim();
-if (string.IsNullOrEmpty(postDiagrams))
-{
-    print("Diagram posted");
-}
-else
-{
-    print("Error: " + postDiagrams);
-}
-```
-
-### 8.2 Unity → FastAPI Communication
-
-**Protocol:** HTTPS
-**Method:** POST
-**Content-Type:** application/json
-**Authentication:** None (relying on IONOS for auth)
-
-**Example Request (/suggest_security):**
-```http
-POST http://localhost:8000/suggest_security HTTP/1.1
-Content-Type: application/json
-
-{
-  "modified_bpmn_xml": "<definitions>...</definitions>",
-  "model": "claude-sonnet-4-20250514",
-  "message_history": [
-    {"role": "user", "content": "Add security to my process"}
   ]
 }
 ```
 
-**Response:**
-```json
+**5. Response Processing**
+
+The backend:
+- Parses LLM response (handles dict or JSON string)
+- Validates structure
+- Logs to debug file
+- Returns to Unity client
+
+**6. Unity Conversion** (GPTManager.cs)
+
+Unity's `ConvertSecuritySuggestionsToXml()` transforms paths to nested XML that DrawElements can visualize.
+
+### 6.4 API Endpoints
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+@app.post("/determine_intent")
+async def determine_intent(request: IntentRequest):
+    """
+    Analyzes user message to determine intent:
+    - create_process
+    - edit_process
+    - talk
+    - suggest_security
+    """
+    # Use LLM to classify intent
+    intent = llm_facade.classify_intent(
+        request.message_history,
+        request.model
+    )
+    return {"intent": intent, "confidence": 0.95}
+
+@app.post("/modify")
+async def modify_diagram(request: ModifyRequest):
+    """
+    Creates or modifies BPMN diagram based on user prompt
+    Returns BPMN XML and JSON
+    """
+    bpmn_xml = bpmn_modeling_service.generate_bpmn(
+        request.message_history,
+        request.process,
+        request.model
+    )
+    return {"bpmn_xml": bpmn_xml, "bpmn_json": convert_to_json(bpmn_xml)}
+
+@app.post("/talk")
+async def talk(request: TalkRequest):
+    """
+    Conversational endpoint for general questions
+    """
+    response = llm_facade.chat(
+        request.message_history,
+        request.model
+    )
+    return {"message": response}
+
+@app.post("/suggest_security")
+async def suggest_security(request: SecurityRequest):
+    """
+    Analyzes BPMN and suggests security ontology mappings
+    """
+    suggestions = llm_facade.analyze_security(
+        request.modified_bpmn_xml,
+        request.message_history,
+        request.model
+    )
+    return {
+        "explanation": suggestions["explanation"],
+        "security_ontologies": suggestions["mappings"]
+    }
+
+@app.post("/bpmn_to_json")
+async def bpmn_to_json(request: BPMNConvertRequest):
+    """
+    Converts BPMN XML to JSON format
+    """
+    return {"bpmn_json": convert_xml_to_json(request.bpmn_xml)}
+```
+
+**Request Models:**
+
+```python
+class Message(BaseModel):
+    role: str
+    content: str
+
+class IntentRequest(BaseModel):
+    model: str
+    message_history: list[Message]
+    process: list
+
+class ModifyRequest(BaseModel):
+    model: str
+    message_history: list[Message]
+    process: Optional[dict]
+
+class TalkRequest(BaseModel):
+    model: str
+    message_history: list[Message]
+    process: list
+    needs_to_be_final_comment: bool
+
+class SecurityRequest(BaseModel):
+    model: str
+    modified_bpmn_xml: str
+    message_history: list[Message]
+```
+
+### 6.5 LLM Facade Pattern
+
+**File Location:** `backend/llm_facade.py` (81 lines)
+
+**Purpose:**
+Unified interface to multiple LLM providers for flexibility and failover.
+
+**Implementation:**
+
+```python
+class UnifiedLLMFacade:
+    def __init__(self):
+        self.providers = {
+            "openai": OpenAIProvider(),
+            "anthropic": AnthropicProvider(),
+            "google": GoogleProvider(),
+            "fireworks": FireworksProvider()
+        }
+
+    def detect_provider(self, model: str) -> str:
+        """
+        Determines LLM provider from model name
+        """
+        if "gpt" in model.lower():
+            return "openai"
+        elif "claude" in model.lower():
+            return "anthropic"
+        elif "gemini" in model.lower():
+            return "google"
+        elif "fireworks" in model.lower():
+            return "fireworks"
+        else:
+            return "openai"  # default
+
+    def generate(self, prompt: str, model: str) -> str:
+        """
+        Unified generation interface
+        """
+        provider_name = self.detect_provider(model)
+        provider = self.providers[provider_name]
+        return provider.generate(prompt, model)
+
+    def chat(self, messages: list, model: str) -> str:
+        """
+        Unified chat interface
+        """
+        provider_name = self.detect_provider(model)
+        provider = self.providers[provider_name]
+        return provider.chat(messages, model)
+```
+
+### 6.6 BPMN Modeling Service
+
+**File Location:** `backend/bpmn_modeling_service.py` (82 lines)
+
+**Purpose:**
+BPMN creation and editing using LLM integration.
+
+**Core Method:**
+
+```python
+class BPMNModelingService:
+    def __init__(self, llm_facade):
+        self.llm = llm_facade
+
+    def generate_bpmn(
+        self,
+        message_history: list,
+        existing_process: dict,
+        model: str
+    ) -> str:
+        """
+        Generates BPMN XML from natural language description
+        """
+        # Construct prompt
+        prompt = self._construct_prompt(message_history, existing_process)
+
+        # Generate with LLM
+        response = self.llm.generate(prompt, model)
+
+        # Extract BPMN XML from response
+        bpmn_xml = self._extract_xml(response)
+
+        # Validate and format
+        bpmn_xml = self._validate_bpmn(bpmn_xml)
+
+        return bpmn_xml
+
+    def _construct_prompt(self, messages, process):
+        """
+        Constructs detailed prompt for BPMN generation
+        """
+        prompt = """You are a BPMN diagram generator.
+        Given a process description, generate valid BPMN 2.0 XML.
+
+        Requirements:
+        - Use standard BPMN elements (tasks, events, gateways)
+        - Include proper positioning (x, y coordinates)
+        - Add text labels for each element
+        - Create sequence flows (arrows) between elements
+
+        Process description:
+        """
+
+        for msg in messages:
+            prompt += f"\n{msg['role']}: {msg['content']}"
+
+        if process:
+            prompt += f"\n\nExisting process:\n{process}"
+
+        prompt += "\n\nGenerate BPMN XML:"
+
+        return prompt
+```
+
+### 6.7 Request/Response Models
+
+**Pydantic Validation:**
+
+```python
+from pydantic import BaseModel, Field
+from typing import Optional, List
+
+class Message(BaseModel):
+    role: str = Field(..., description="Role: user or assistant")
+    content: str = Field(..., description="Message content")
+
+class IntentRequest(BaseModel):
+    model: str
+    message_history: List[Message]
+    process: List = []
+
+class IntentResponse(BaseModel):
+    intent: str
+    confidence: float
+
+class ModifyRequest(BaseModel):
+    model: str
+    message_history: List[Message]
+    process: Optional[dict] = None
+
+class ModifyResponse(BaseModel):
+    bpmn_xml: str
+    bpmn_json: str
+
+class SecurityRequest(BaseModel):
+    model: str
+    modified_bpmn_xml: str
+    message_history: List[Message]
+
+class SecurityResponse(BaseModel):
+    explanation: str
+    security_ontologies: List[dict]
+
+class OntologyMapping(BaseModel):
+    elementID: str
+    elementText: str
+    ontology_path: List[str]
+```
+
+---
+
+## 7. cyberd3sign.com PHP Backend
+
+### 7.1 Server Architecture
+
+**Hosting:** cyberd3sign.com (traditional web hosting)
+
+**Purpose:** User authentication, session management, and data persistence
+
+**Technology Stack:**
+- PHP 7.x+
+- MySQL 5.7+
+- Apache web server
+
+**Note:** This is separate from the IONOS Cloud server (217.154.116.117) which handles LLM processing. The cyberd3sign.com server focuses on Unity-related functions: user login, registration, diagram storage, and database operations.
+
+**File Structure:**
+
+```
+/cyberd3sign/
+  ├── login.php
+  ├── register.php
+  ├── get_diagrams.php
+  ├── save_diagram.php
+  ├── get_security_diagrams.php
+  ├── save_security.php
+  └── config/
+      └── database.php
+```
+
+### 7.2 Database Integration
+
+**Connection Configuration:**
+
+```php
+<?php
+// config/database.php
+
+class Database {
+    private $host = "localhost";
+    private $db_name = "cyberd3sign_db";
+    private $username = "cyberd3sign_user";
+    private $password = "your_password";
+    public $conn;
+
+    public function getConnection() {
+        $this->conn = null;
+
+        try {
+            $this->conn = new PDO(
+                "mysql:host=" . $this->host .
+                ";dbname=" . $this->db_name,
+                $this->username,
+                $this->password
+            );
+            $this->conn->setAttribute(
+                PDO::ATTR_ERRMODE,
+                PDO::ERRMODE_EXCEPTION
+            );
+        } catch(PDOException $exception) {
+            echo "Connection error: " . $exception->getMessage();
+        }
+
+        return $this->conn;
+    }
+}
+?>
+```
+
+**Database Schema:**
+
+```sql
+-- Users table
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    email VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- BPMN diagrams table
+CREATE TABLE bpmn_diagrams (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    diagram_name VARCHAR(100) NOT NULL,
+    bpmn_xml TEXT NOT NULL,
+    screenshot LONGBLOB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Security diagrams table
+CREATE TABLE security_diagrams (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    bpmn_diagram_id INT NOT NULL,
+    security_xml TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (bpmn_diagram_id) REFERENCES bpmn_diagrams(id)
+);
+```
+
+### 7.3 Data Persistence
+
+**Login Endpoint:**
+
+```php
+<?php
+// login.php
+
+require_once 'config/database.php';
+
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json");
+
+$database = new Database();
+$db = $database->getConnection();
+
+$username = $_POST['username'];
+$password = $_POST['password'];
+
+$query = "SELECT id, username, password_hash FROM users
+          WHERE username = :username";
+$stmt = $db->prepare($query);
+$stmt->bindParam(":username", $username);
+$stmt->execute();
+
+if ($stmt->rowCount() > 0) {
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (password_verify($password, $row['password_hash'])) {
+        echo json_encode([
+            "success" => true,
+            "userId" => $row['id'],
+            "username" => $row['username']
+        ]);
+    } else {
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid credentials"
+        ]);
+    }
+} else {
+    echo json_encode([
+        "success" => false,
+        "message" => "User not found"
+    ]);
+}
+?>
+```
+
+**Save Diagram Endpoint:**
+
+```php
+<?php
+// save_diagram.php
+
+require_once 'config/database.php';
+
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json");
+
+$database = new Database();
+$db = $database->getConnection();
+
+$user_id = $_POST['user_id'];
+$diagram_name = $_POST['diagram_name'];
+$bpmn_xml = $_POST['bpmn_xml'];
+$screenshot = $_POST['screenshot']; // Base64 encoded
+
+// Decode screenshot
+$screenshot_binary = base64_decode($screenshot);
+
+$query = "INSERT INTO bpmn_diagrams
+          (user_id, diagram_name, bpmn_xml, screenshot)
+          VALUES (:user_id, :diagram_name, :bpmn_xml, :screenshot)";
+
+$stmt = $db->prepare($query);
+$stmt->bindParam(":user_id", $user_id);
+$stmt->bindParam(":diagram_name", $diagram_name);
+$stmt->bindParam(":bpmn_xml", $bpmn_xml);
+$stmt->bindParam(":screenshot", $screenshot_binary);
+
+if ($stmt->execute()) {
+    echo json_encode([
+        "success" => true,
+        "diagram_id" => $db->lastInsertId()
+    ]);
+} else {
+    echo json_encode([
+        "success" => false,
+        "message" => "Failed to save diagram"
+    ]);
+}
+?>
+```
+
+**Get Diagrams Endpoint:**
+
+```php
+<?php
+// get_diagrams.php
+
+require_once 'config/database.php';
+
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json");
+
+$database = new Database();
+$db = $database->getConnection();
+
+$user_id = $_GET['user_id'];
+$page = isset($_GET['page']) ? intval($_GET['page']) : 0;
+$limit = 10;
+$offset = $page * $limit;
+
+$query = "SELECT id, diagram_name, created_at, updated_at
+          FROM bpmn_diagrams
+          WHERE user_id = :user_id
+          ORDER BY updated_at DESC
+          LIMIT :limit OFFSET :offset";
+
+$stmt = $db->prepare($query);
+$stmt->bindParam(":user_id", $user_id);
+$stmt->bindParam(":limit", $limit, PDO::PARAM_INT);
+$stmt->bindParam(":offset", $offset, PDO::PARAM_INT);
+$stmt->execute();
+
+$diagrams = [];
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $diagrams[] = $row;
+}
+
+echo json_encode([
+    "success" => true,
+    "diagrams" => $diagrams,
+    "page" => $page
+]);
+?>
+```
+
+---
+
+## 8. Security Framework
+
+### 8.1 Security Ontology
+
+CyberD3sign implements a six-category security ontology framework:
+
+```
+root/
+└── bpmnElement/
+    ├── 1. Privacy/
+    │   ├── confidentiality/
+    │   │   ├── encryption
+    │   │   ├── access_control
+    │   │   └── data_masking
+    │   ├── anonymization/
+    │   └── consent_management/
+    │
+    ├── 2. Integrity/
+    │   ├── data_validation/
+    │   ├── checksums/
+    │   ├── digital_signatures/
+    │   └── version_control/
+    │
+    ├── 3. Availability/
+    │   ├── redundancy/
+    │   ├── backup/
+    │   ├── load_balancing/
+    │   └── disaster_recovery/
+    │
+    ├── 4. Authentication/
+    │   ├── multi_factor_auth/
+    │   ├── biometrics/
+    │   ├── password_policies/
+    │   └── session_management/
+    │
+    ├── 5. Authorization/
+    │   ├── role_based_access/
+    │   ├── permission_models/
+    │   ├── least_privilege/
+    │   └── segregation_of_duties/
+    │
+    └── 6. Non-Repudiation/
+        ├── audit_logs/
+        ├── digital_signatures/
+        ├── timestamps/
+        └── transaction_logging/
+```
+
+### 8.2 AI-Powered Security Suggestions
+
+**Suggestion Generation Process:**
+
+```
+User Request: "Suggest security measures"
+        ↓
+GPTManager.SendToSuggestSecurity()
+        ↓
+FastAPI /suggest_security endpoint
+        ↓
+LLM analyzes BPMN elements:
+  - Identifies sensitive tasks (e.g., "Process Payment")
+  - Maps to security categories (e.g., encryption, authentication)
+  - Generates ontology paths
+        ↓
+Returns JSON:
 {
-  "explanation": "The login task requires authentication and encryption.",
+  "explanation": "Payment processing requires encryption...",
   "security_ontologies": [
     {
-      "elementID": "task1",
-      "elementText": "User Login",
-      "ontology_path": ["root/bpmnElement/accesscontrol/authentication"]
+      "elementID": "task_payment",
+      "elementText": "Process Payment",
+      "ontology_path": [
+        "root/bpmnElement/privacy/confidentiality/encryption",
+        "root/bpmnElement/authentication/multi_factor_auth"
+      ]
     }
-  ],
-  "suggestions": [...],
-  "modification_log": [...]
+  ]
+}
+        ↓
+GPTManager.ConvertSecuritySuggestionsToXml()
+        ↓
+XML stored in DiagramHandler.securityRequirements
+        ↓
+DrawElements.DrawBPMNSecurity() visualizes
+```
+
+### 8.3 Security XML Generation
+
+**Conversion Algorithm:**
+
+```csharp
+private string ConvertSecuritySuggestionsToXml(
+    List<object> suggestions)
+{
+    XmlDocument xmlDoc = new XmlDocument();
+    XmlElement root = xmlDoc.CreateElement("ParentTaskSecurityHolder");
+    xmlDoc.AppendChild(root);
+
+    foreach (var suggestion in suggestions)
+    {
+        var dict = suggestion as Dictionary<string, object>;
+        string taskId = dict["elementID"].ToString();
+        List<object> ontologyPaths = dict["ontology_path"] as List<object>;
+
+        XmlElement taskHolder = xmlDoc.CreateElement("TaskSecurityHolder");
+        taskHolder.SetAttribute("TaskID", taskId);
+
+        foreach (string fullPath in ontologyPaths)
+        {
+            // Parse path: "root/bpmnElement/privacy/confidentiality/encryption"
+            string[] tags = fullPath.Split('/');
+
+            // Skip "root" and "bpmnElement"
+            int startIndex = Array.IndexOf(tags, "bpmnElement") + 1;
+
+            // Build nested XML: <privacy><confidentiality><encryption/>
+            XmlElement currentParent = taskHolder;
+            for (int i = startIndex; i < tags.Length; i++)
+            {
+                string tag = tags[i];
+
+                // Check if child already exists
+                XmlElement existing = null;
+                foreach (XmlNode child in currentParent.ChildNodes)
+                {
+                    if (child.Name == tag)
+                    {
+                        existing = (XmlElement)child;
+                        break;
+                    }
+                }
+
+                if (existing == null)
+                {
+                    XmlElement newNode = xmlDoc.CreateElement(tag);
+                    currentParent.AppendChild(newNode);
+                    currentParent = newNode;
+                }
+                else
+                {
+                    currentParent = existing;
+                }
+            }
+        }
+
+        root.AppendChild(taskHolder);
+    }
+
+    return xmlDoc.OuterXml;
 }
 ```
 
-**Unity Code (UnityWebRequest):**
+**Example Output:**
+
+```xml
+<ParentTaskSecurityHolder>
+  <TaskSecurityHolder TaskID="task_payment">
+    <privacy>
+      <confidentiality>
+        <encryption/>
+      </confidentiality>
+    </privacy>
+    <authentication>
+      <multi_factor_auth/>
+    </authentication>
+  </TaskSecurityHolder>
+
+  <TaskSecurityHolder TaskID="task_review">
+    <authorization>
+      <role_based_access/>
+    </authorization>
+    <non_repudiation>
+      <audit_logs/>
+    </non_repudiation>
+  </TaskSecurityHolder>
+</ParentTaskSecurityHolder>
+```
+
+---
+
+## 9. Data Flow and Integration
+
+### 9.1 User Authentication Flow
+
+```
+User enters credentials
+        ↓
+Login.cs → LoginUser()
+        ↓
+UnityWebRequest → POST cyberd3sign.com/login.php
+        ↓
+PHP verifies credentials against MySQL
+        ↓
+Response: {success: true, userId: 123, username: "john"}
+        ↓
+SessionManager stores user data
+        ↓
+SceneManager.LoadScene("MainScene")
+```
+
+### 9.2 Diagram Creation Flow
+
+**Manual Creation:**
+
+```
+User drags BPMN element from toolbar
+        ↓
+Instantiate prefab at mouse position
+        ↓
+User connects elements with arrows
+        ↓
+SaveHandler captures:
+  - Element positions
+  - Element types
+  - Arrow connections
+        ↓
+Generate BPMN XML
+        ↓
+SaveHandler.saveBPMN()
+        ↓
+POST cyberd3sign.com/save_diagram.php
+        ↓
+MySQL stores diagram
+```
+
+### 9.3 LLM-Powered Diagram Generation Flow
+
+**AI-Assisted Creation:**
+
+```
+User types: "Create a loan approval process"
+        ↓
+GPTManager.SendMessageToGPT()
+        ↓
+POST 217.154.116.117:8000/determine_intent
+        ↓
+Response: {intent: "create_process"}
+        ↓
+GPTManager.RouteByIntent() → SendToModify()
+        ↓
+POST 217.154.116.117:8000/modify
+Body: {
+  model: "gpt-4.1-nano",
+  message_history: [{role: "user", content: "Create a loan approval process"}]
+}
+        ↓
+FastAPI → BPMNModelingService.generate_bpmn()
+        ↓
+LLM generates BPMN XML with:
+  - Start event
+  - Tasks (Submit Application, Credit Check, Approval Decision)
+  - Gateway (Approved?)
+  - End events (Approved, Rejected)
+        ↓
+Response: {bpmn_xml: "<?xml version...>"}
+        ↓
+DiagramHandler.BPMNDiagramData = bpmn_xml
+        ↓
+loadLLMDiagramInstance.InitializeDiagram()
+        ↓
+Parse XML → Instantiate prefabs → Render diagram
+```
+
+### 9.4 Security Analysis Flow
+
+**Complete End-to-End Security Analysis Pipeline:**
+
+```
+Step 1: User Request
+User types: "suggest security" or clicks security analysis button
+        ↓
+
+Step 2: Intent Detection (GPTManager.cs)
+GPTManager.SendMessageToGPT("suggest security")
+        ↓
+POST http://217.154.116.117:8000/determine_intent
+Body: {
+  model: "gpt-4.1-nano",
+  message_history: [{role: "user", content: "suggest security"}],
+  process: []
+}
+        ↓
+Response: {intent: "suggest_security", confidence: 0.95}
+        ↓
+
+Step 3: Route to Security Handler (GPTManager.cs:76-103)
+RouteByIntent("suggest_security") → SendToSuggestSecurity()
+        ↓
+
+Step 4: Call LLM Backend (GPTManager.cs:187-265)
+POST http://217.154.116.117:8000/suggest_security
+Body: {
+  model: "gpt-4.1-nano",
+  modified_bpmn_xml: DiagramHandler.BPMNDiagramData,
+  message_history: [...]
+}
+        ↓
+
+Step 5: LLM Analysis (IONOS Cloud FastAPI Server)
+- Parse BPMN XML structure
+- Identify sensitive elements (e.g., "Process Payment", "Verify Identity")
+- Analyze business logic and data flows
+- Map to 6-category security ontology
+- Generate ontology paths for each element
+        ↓
+
+Response: {
+  explanation: "Payment processing requires encryption and authentication...",
+  security_ontologies: [
+    {
+      elementID: "task_payment",
+      elementText: "Process Payment",
+      ontology_path: [
+        "root/bpmnElement/privacy/confidentiality/encryption",
+        "root/bpmnElement/accesscontrol/authentication/mfa"
+      ]
+    },
+    {
+      elementID: "task_verify",
+      elementText: "Verify Identity",
+      ontology_path: [
+        "root/bpmnElement/accesscontrol/authentication/biometric",
+        "root/bpmnElement/accountability/audit/accesslog"
+      ]
+    }
+  ]
+}
+        ↓
+
+Step 6: Convert to Hierarchical XML (GPTManager.cs:267-326)
+ConvertSecuritySuggestionsToXml(security_ontologies)
+
+For each element and ontology path:
+  - Parse path: "root/bpmnElement/privacy/confidentiality/encryption"
+  - Skip "root" and "bpmnElement" prefixes
+  - Build nested XML structure
+
+Generated XML:
+<ParentTaskSecurityHolder>
+  <TaskSecurityHolder TaskID="task_payment">
+    <privacy>
+      <confidentiality>
+        <encryption/>
+      </confidentiality>
+    </privacy>
+    <accesscontrol>
+      <authentication>
+        <mfa/>
+      </authentication>
+    </accesscontrol>
+  </TaskSecurityHolder>
+
+  <TaskSecurityHolder TaskID="task_verify">
+    <accesscontrol>
+      <authentication>
+        <biometric/>
+      </authentication>
+    </accesscontrol>
+    <accountability>
+      <audit>
+        <accesslog/>
+      </audit>
+    </accountability>
+  </TaskSecurityHolder>
+</ParentTaskSecurityHolder>
+        ↓
+
+Step 7: Store Security Requirements (GPTManager.cs:251-253)
+DiagramHandler.securityRequirements = mergedSecurityXml;
+DrawElements.Instance().DrawBPMNSecurity();
+        ↓
+
+Step 8: Visualize Security Symbols (DrawElements.cs:169-299)
+DrawBPMNSecurity() {
+  - Clear existing security visualizations
+  - Parse security XML
+  - For each TaskSecurityHolder:
+    - Find BPMN element by TaskID
+    - Calculate position above element
+    - Draw vertical line (pos1 to pos1 + 390 units)
+    - Render 4-level symbol hierarchy:
+      * Level 1: privacy, accesscontrol (main category)
+      * Level 2: confidentiality, authentication (sub-category)
+      * Level 3: encryption, mfa, biometric (control)
+      * Level 4: AES256, TOTP, fingerprint (implementation)
+}
+        ↓
+
+Step 9: Display to User
+Visual security overlay appears on diagram:
+- Vertical lines above secure elements
+- Stacked security symbols showing requirements
+- User can click symbols for details
+- Security requirements saved with diagram
+```
+
+**Key Components:**
+
+| Component | Responsibility |
+|-----------|---------------|
+| GPTManager.cs | Orchestrates security analysis request |
+| IONOS Cloud FastAPI | LLM analysis and ontology mapping |
+| ConvertSecuritySuggestionsToXml() | Transforms ontology paths to XML |
+| DiagramHandler.securityRequirements | Stores security XML data |
+| DrawElements.DrawBPMNSecurity() | Renders visual security symbols |
+| symbol.cs | Individual security symbol rendering |
+| taskSecurityLines.cs | Vertical line rendering |
+
+---
+
+## 10. Technical Implementation Details
+
+### 10.1 Coroutine-Based Async Operations
+
+Unity uses coroutines for asynchronous operations:
+
 ```csharp
-// BPMNSecurityAnalyzer.cs lines 148-173
-string jsonRequestBody = "{" +
-    $"\"model\": \"{claudeModel}\"," +
-    "\"max_tokens\": 4000," +
-    "\"messages\": [" +
-        "{" +
-            "\"role\": \"user\"," +
-            $"\"content\": {JsonStringEscape(prompt)}" +
-        "}" +
-    "]" +
-"}";
+// Starting a coroutine
+StartCoroutine(DetermineIntent(userMessage));
 
-using (UnityWebRequest request = new UnityWebRequest(apiEndpoint, "POST"))
+// Coroutine implementation
+private IEnumerator DetermineIntent(string userMessage)
 {
-    byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonRequestBody);
-    request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-    request.downloadHandler = new DownloadHandlerBuffer();
-    request.SetRequestHeader("Content-Type", "application/json");
-    request.SetRequestHeader("x-api-key", apiKey);
-    request.SetRequestHeader("anthropic-version", "2023-06-01");
+    // Prepare request
+    UnityWebRequest request = ...;
 
+    // Yield until request completes
     yield return request.SendWebRequest();
 
-    string responseText = request.downloadHandler.text;
-    // Process response...
-}
-```
-
-### 8.3 FastAPI → External LLM APIs
-
-#### Anthropic Claude
-
-**Endpoint:** `https://api.anthropic.com/v1/messages`
-
-**Request:**
-```http
-POST https://api.anthropic.com/v1/messages HTTP/1.1
-Content-Type: application/json
-x-api-key: sk-ant-...
-anthropic-version: 2023-06-01
-
-{
-  "model": "claude-sonnet-4-20250514",
-  "max_tokens": 3000,
-  "temperature": 0.3,
-  "messages": [
-    {"role": "user", "content": "Create a BPMN for user registration..."}
-  ],
-  "response_format": {"type": "json_object"}
-}
-```
-
-**Response:**
-```json
-{
-  "id": "msg_01...",
-  "type": "message",
-  "role": "assistant",
-  "content": [
+    // Process response
+    if (request.result == UnityWebRequest.Result.Success)
     {
-      "type": "text",
-      "text": "{\"process\": [...]}"
+        // Handle success
     }
-  ],
-  "model": "claude-sonnet-4-20250514",
-  "usage": {
-    "input_tokens": 245,
-    "output_tokens": 512
-  }
 }
 ```
 
-#### OpenAI (via LiteLLM)
+**Benefits:**
+- Non-blocking I/O for network requests
+- Smooth UI during long operations
+- Sequential async code without callbacks
 
-**Endpoint:** `https://api.openai.com/v1/chat/completions`
+### 10.2 XML Document Processing
 
-**Request:**
-```http
-POST https://api.openai.com/v1/chat/completions HTTP/1.1
-Content-Type: application/json
-Authorization: Bearer sk-...
+**XML Parsing Patterns:**
 
+```csharp
+// Load XML from string
+XmlDocument xmlDoc = new XmlDocument();
+xmlDoc.LoadXml(xmlString);
+
+// Query by tag name
+XmlNodeList shapes = xmlDoc.GetElementsByTagName("BPMNShape");
+
+// Iterate nodes
+foreach (XmlNode shape in shapes)
 {
-  "model": "gpt-4.1",
-  "messages": [
-    {"role": "user", "content": "Create a BPMN..."}
-  ],
-  "max_tokens": 3000,
-  "temperature": 0.3,
-  "response_format": {"type": "json_object"}
+    // Access attributes
+    string id = shape.Attributes["id"].Value;
+
+    // Access child elements
+    XmlNode bounds = shape.FirstChild;
+    float height = float.Parse(bounds.Attributes["height"].Value);
+}
+
+// Create new elements
+XmlElement newElement = xmlDoc.CreateElement("TaskSecurityHolder");
+newElement.SetAttribute("TaskID", "task_1");
+xmlDoc.AppendChild(newElement);
+
+// Serialize to string
+string xmlOutput = xmlDoc.OuterXml;
+```
+
+### 10.3 Scaling and Layout Algorithms
+
+**Scale Factor Calculation:**
+
+```csharp
+// LLM-generated diagrams use large coordinates (e.g., 800x600 canvas)
+// Unity 3D space typically uses smaller units (e.g., 10x10 visible area)
+
+private const float scaleFactor = 0.26f;
+
+// Apply to all coordinates
+float scaledX = originalX * scaleFactor;
+float scaledY = originalY * scaleFactor;
+float scaledWidth = originalWidth * scaleFactor;
+float scaledHeight = originalHeight * scaleFactor;
+```
+
+**Why 0.26?**
+- Standard BPMN coordinates: ~800x600 canvas, 100x80 elements
+- Unity visible area: ~200x150 units
+- Ratio: 200/800 = 0.25, tuned to 0.26 for optimal spacing
+
+**Gateway Arrow Distribution:**
+
+```csharp
+// Distribute arrows to avoid overlap
+string[] positions = { "locationRight", "locationBottom", "locationTop" };
+
+for (int i = 0; i < outgoingArrows.Count; i++)
+{
+    string position = positions[i % 3];
+    outgoingArrows[i].startPosition = position;
 }
 ```
 
-#### Google Gemini (via LiteLLM)
+**Arrow Path Optimization:**
 
-**Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
+```csharp
+// Simplify arrow paths with intermediate waypoints
+List<vertexPosition> positions = new List<vertexPosition>();
 
-#### Fireworks AI (via LiteLLM)
+// Start point (element edge)
+positions.Add(new vertexPosition(0, startX, startY));
 
-**Endpoint:** `https://api.fireworks.ai/inference/v1/chat/completions`
+// Optional: Add midpoint for curved arrows
+if (needsCurve)
+{
+    float midX = (startX + endX) / 2;
+    float midY = (startY + endY) / 2 + curveOffset;
+    positions.Add(new vertexPosition(1, midX, midY));
+}
 
-### 8.4 CORS Configuration
+// End point (target element edge)
+positions.Add(new vertexPosition(positions.Count, endX, endY));
+```
 
-**FastAPI Backend (app.py lines 34-40):**
+---
+
+## 11. Deployment and Infrastructure
+
+### 11.1 Server Configuration
+
+**Server 1 - IONOS Cloud (LLM Backend):**
+- **Server IP:** 217.154.116.117
+- **Port:** 8000
+- **Protocol:** HTTP
+- **Framework:** FastAPI (Python 3.12)
+- **Deployment:** Docker or systemd service on IONOS Cloud
+- **Purpose:** AI processing with stored LLM API keys
+- **API Keys:** OpenAI, Anthropic, Google, Fireworks (server-side storage)
+- **Cost Savings:** No GPU infrastructure needed
+
+**Server 2 - cyberd3sign.com (Data Backend):**
+- **Domain:** cyberd3sign.com
+- **Hosting:** Traditional web hosting
+- **Server:** Apache
+- **Database:** MySQL 5.7+
+- **SSL:** HTTPS enabled
+- **Purpose:** User authentication, diagram storage, web hosting
+
+### 11.2 API Endpoints
+
+**Server 1 - IONOS Cloud FastAPI (217.154.116.117:8000):**
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| /determine_intent | POST | Intent classification using LLM |
+| /modify | POST | BPMN generation/editing via LLM |
+| /talk | POST | Conversational interface with LLM |
+| /suggest_security | POST | Security analysis using LLM |
+| /bpmn_to_json | POST | XML to JSON conversion |
+
+**Server 2 - cyberd3sign.com PHP:**
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| /login.php | POST | User authentication |
+| /register.php | POST | User registration |
+| /get_diagrams.php | GET | Fetch user diagrams from MySQL |
+| /save_diagram.php | POST | Save BPMN diagram to MySQL |
+| /get_security_diagrams.php | GET | Fetch security diagrams |
+| /save_security.php | POST | Save security mappings |
+
+### 11.3 Environment Management
+
+**Unity Build Configuration:**
+
+```csharp
+public class ServerConnection
+{
+    #if UNITY_EDITOR
+    public static string currentServer = localhostServer;
+    #else
+    public static string currentServer = productionServer;
+    #endif
+
+    public static string localhostServer = "http://localhost/cyberd3sign/";
+    public static string productionServer = "https://cyberd3sign.com/";
+}
+```
+
+**FastAPI Environment Variables (IONOS Cloud Server):**
+
 ```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],      # Allow all origins (Unity can connect from anywhere)
-    allow_credentials=True,
-    allow_methods=["*"],      # Allow all HTTP methods
-    allow_headers=["*"],      # Allow all headers
-)
+import os
+
+# LLM API Keys (stored on IONOS Cloud server)
+# These keys enable AI functionality without GPU infrastructure
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY")
+
+# Server Configuration
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", 8000))
+DEBUG = os.getenv("DEBUG", "False") == "True"
 ```
 
-**Security Note:** Production deployment should restrict `allow_origins` to specific domains.
+**Key Benefits:**
+- API keys stored server-side on IONOS Cloud
+- Unity client never handles LLM credentials
+- No GPU infrastructure costs
+- Pay-per-API-call pricing model
 
----
+**Docker Deployment (Likely Configuration):**
 
-## 9. Critical Code Paths
-
-### 9.1 BPMN Creation Path (End-to-End)
-
-```
-1. Unity BPMN.unity → User clicks "AI Assistant" button
-2. UI panel opens with text input
-3. User types: "Create a process for online shopping checkout"
-4. Submit button clicked
-5. AIAssistant.cs → SendMessageToBackend()
-6. HTTP POST to FastAPI /determine_intent
-7. FastAPI → utils.get_llm_facade("claude-sonnet-4")
-8. LLMFacade → AnthropicProvider.call()
-9. Anthropic API returns: {"intent": "modify", "confidence": 0.95}
-10. Unity receives intent → triggers CreateBPMN()
-11. HTTP POST to FastAPI /modify (process=null for new)
-12. FastAPI → BpmnModelingService.create_bpmn()
-13. PromptTemplateProcessor.render_template("create_bpmn.jinja2")
-14. LLMFacade.call(prompt, max_tokens=3000)
-15. Claude generates BPMN JSON process array
-16. FastAPI → BpmnXmlGenerator.create_bpmn_xml(process)
-17. Response: {"bpmn_xml": "<definitions>...</definitions>", "bpmn_json": [...]}
-18. Unity AIAssistant.cs → OnReceiveBPMN(response)
-19. DiagramHandler.BPMNDoc.LoadXml(response.bpmn_xml)
-20. LoadElements.cs → RenderBPMN() triggered
-21. 3D BPMN elements instantiated in scene
-22. User sees completed diagram
-```
-
-### 9.2 Security Analysis Path (End-to-End)
-
-```
-1. Unity Build.unity → User has loaded BPMN diagram
-2. User selects element "task_login" (User Login task)
-3. UI shows "Analyze Security" button
-4. Button clicked → BPMNSecurityAnalyzer.AnalyzeElement("task_login")
-5. Extract element XML from DiagramHandler.BPMNDoc
-6. Build Claude prompt with security categories
-7. UnityWebRequest POST to https://api.anthropic.com/v1/messages
-8. Request body: model=claude-3-opus, messages=[{user: prompt}]
-9. Claude processes BPMN element
-10. Claude identifies: Login task needs authentication + encryption
-11. Response: {
-     "elementId": "task_login",
-     "explanation": "Login requires user authentication...",
-     "suggestedControls": [
-       "accesscontrol.authentication.personal",
-       "privacy.confidentiality.encryption"
-     ]
-   }
-12. BPMNSecurityAnalyzer.ParseClaudeResponse(json)
-13. Display suggestions in UI panel
-14. User clicks "Apply" button
-15. BPMNSecurityAnalyzer.ApplySuggestions()
-16. foreach control: ApplySecurityToElement("task_login", control)
-17. Update DiagramHandler.reqDoc:
-    <bpmnElement elementID="task_login">
-      <accesscontrol>
-        <authentication>
-          <personal required="true"/>
-        </authentication>
-      </accesscontrol>
-      <privacy>
-        <confidentiality>
-          <encryption required="true"/>
-        </confidentiality>
-      </privacy>
-    </bpmnElement>
-18. UI updates to show green security icons on element
-19. User clicks "Save Security Requirements"
-20. SaveHandler.tSaveRequirements() → Convert reqDoc to string
-21. SaveHandler.saveRequirements() coroutine
-22. HTTP POST to IONOS /database/UserMechanics/saverequirements.php
-23. MySQL UPDATE security_diagrams SET requirements_xml = ...
-24. Response: "" (empty = success)
-25. UI shows "Security requirements saved successfully"
-```
-
-### 9.3 Data Persistence Path
-
-```
-1. User modifies BPMN diagram (adds task, moves gateway)
-2. Diagram state stored in:
-   - SaveHandler.elementSaveDetails (all elements)
-   - SaveHandler.sequenceFlows (all connections)
-3. User clicks "Save" button
-4. SaveHandler.tSaveBPMN() triggered
-5. Iterate elementSaveDetails → rebuild XML structure
-6. foreach element:
-     XmlElement node = BPMNDoc.CreateElement(element.type)
-     node.SetAttribute("id", element.id)
-     node.SetAttribute("name", element.text)
-     // ... position, type-specific attributes
-7. foreach sequenceFlow:
-     XmlElement flow = BPMNDoc.CreateElement("sequenceFlow")
-     flow.SetAttribute("sourceRef", flow.source)
-     flow.SetAttribute("targetRef", flow.target)
-8. DiagramHandler.BPMNDoc = rebuilt XML document
-9. SaveHandler.bpmnDiagram = BPMNDoc.OuterXml
-10. SaveHandler.saveDiagram = true
-11. LateUpdate() → StartCoroutine(saveBPMN())
-12. Check if diagram name exists in bpmndiagramList
-13. if NEW:
-      WWWForm POST → /savediagrams.php
-    else:
-      WWWForm POST → /updatediagrams.php
-14. PHP receives POST data
-15. Validate user session (userID + company)
-16. if NEW:
-      INSERT INTO bpmn_diagrams (user_id, company, diagram_name, diagram_xml, last_edited, last_user)
-      VALUES (?, ?, ?, ?, NOW(), ?)
-    else:
-      UPDATE bpmn_diagrams
-      SET diagram_xml = ?, last_edited = NOW(), last_user = ?
-      WHERE diagram_name = ? AND user_id = ? AND company = ?
-17. MySQL commits transaction
-18. PHP returns empty string (success)
-19. Unity receives response
-20. SaveHandler.saveDiagram = false
-21. UI shows "Diagram saved successfully"
-```
-
----
-
-## 10. Deployment Architecture
-
-### 10.1 Production Deployment Topology
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                     End Users                                     │
-│                 (Desktop Application)                             │
-└────────────────┬─────────────────────────────────────────────────┘
-                 │
-         Unity Application
-                 │
-                 ├──────────────────────┬────────────────────────────┐
-                 │                      │                             │
-         HTTPS (Port 443)       HTTP (Port 8000)           HTTPS (Port 443)
-                 │                      │                             │
-                 ↓                      ↓                             ↓
-┌─────────────────────────┐  ┌──────────────────────┐  ┌────────────────────┐
-│   IONOS Web Server      │  │  Docker Container    │  │  External LLM APIs │
-│   www.cyberd3sign.com   │  │  FastAPI Backend     │  ├────────────────────┤
-├─────────────────────────┤  ├──────────────────────┤  │ • Anthropic Claude │
-│ • Apache/Nginx          │  │ • Python 3.12        │  │ • OpenAI GPT       │
-│ • PHP 7.x               │  │ • FastAPI 0.115.6    │  │ • Google Gemini    │
-│ • MySQL 5.7             │  │ • Uvicorn ASGI       │  │ • Fireworks AI     │
-│                         │  │ • Port: 8000         │  └────────────────────┘
-│ Endpoints:              │  │                      │
-│ /database/UserMechanics/│  │ Endpoints:           │
-│   - login.php           │  │ /bpmn_to_json        │
-│   - diagrams.php        │  │ /determine_intent    │
-│   - savediagrams.php    │  │ /modify              │
-│   - securitydiagrams.php│  │ /suggest_security    │
-│   - saverequirements.php│  │ /talk                │
-└─────────────────────────┘  └──────────────────────┘
-         ↓                            ↓
-┌─────────────────────────┐  ┌──────────────────────┐
-│   MySQL Database        │  │  .env Configuration   │
-│   (Persistent Storage)  │  ├──────────────────────┤
-├─────────────────────────┤  │ OPENAI_API_KEY=...   │
-│ Tables:                 │  │ ANTHROPIC_API_KEY=...│
-│ - users                 │  │ GEMINI_API_KEY=...   │
-│ - bpmn_diagrams         │  │ FIREWORKS_AI_API_KEY │
-│ - security_diagrams     │  └──────────────────────┘
-└─────────────────────────┘
-```
-
-### 10.2 Docker Deployment (FastAPI Backend)
-
-**Dockerfile:**
 ```dockerfile
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install uv package manager (fast dependency installer)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Copy dependency files
-COPY pyproject.toml uv.lock ./
+COPY . .
 
-# Install dependencies
-RUN uv sync --frozen --no-cache
-
-# Copy application code
-COPY src/ ./src/
-COPY ontology_template.xml ./
-COPY security_ontology.xml ./
-
-# Expose port
 EXPOSE 8000
 
-# Run FastAPI server
-CMD ["uvicorn", "src.bpmn_assistant.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
-
-**docker-compose.yml:**
-```yaml
-version: '3.8'
-
-services:
-  bpmn_assistant:
-    image: sithuyehtun/bpmn_assistant:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - FIREWORKS_AI_API_KEY=${FIREWORKS_AI_API_KEY}
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - bpmn-network
-    restart: unless-stopped
-
-networks:
-  bpmn-network:
-    driver: bridge
-```
-
-**Deployment Commands:**
-```bash
-# Build Docker image
-docker-compose build
-
-# Push to Docker Hub
-docker-compose push
-
-# Deploy on IONOS server
-ssh user@ionos-server
-docker pull sithuyehtun/bpmn_assistant:latest
-docker run -d -p 8000:8000 \
-  -e OPENAI_API_KEY=... \
-  -e ANTHROPIC_API_KEY=... \
-  sithuyehtun/bpmn_assistant:latest
-```
-
-### 10.3 CI/CD Pipeline
-
-**GitHub Actions Workflow (.github/workflows/ci.yml):**
-```yaml
-name: CI/CD Pipeline
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          pip install uv
-          uv sync
-
-      - name: Run tests
-        run: |
-          pytest tests/
-
-  build:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Build Docker image
-        run: |
-          docker-compose build
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Push to Docker Hub
-        run: |
-          docker-compose push
-```
-
-### 10.4 Unity Build Configuration
-
-**Build Targets:**
-- Windows 64-bit (Primary)
-- macOS (Intel/Apple Silicon)
-- Linux
-
-**Build Settings:**
-```
-Scenes in Build:
-  0. Login.unity
-  1. Menu.unity
-  2. BPMN.unity
-  3. Build.unity
-  4. Policy.unity
-  5. Loading.unity
-  6. Credits.unity
-  7. About.unity
-
-Player Settings:
-  Company Name: CyberD3sign
-  Product Name: CyberD3sign BPMN Editor
-  Version: 1.0.0
-  API Compatibility Level: .NET 4.x
-  Scripting Backend: Mono
-  Target Architectures: x86_64
-```
-
-**Post-Build:**
-1. Package executable + data folder
-2. Include ReadMe.txt with server connection instructions
-3. Create installer (NSIS for Windows, DMG for macOS)
 
 ---
 
-## Appendix A: Key File Locations
+## Appendix A: Complete Code Reference
 
-### Unity Frontend
+### A.1 GPTManager.cs Key Methods
 
-| File | Path | Purpose |
-|------|------|---------|
-| DiagramHandler.cs | `Assets/Scripts/DiagramHandler.cs` | BPMN/Security diagram loading |
-| SaveHandler.cs | `Assets/Scripts/SaveHandler.cs` | Diagram persistence |
-| Login.cs | `Assets/Scripts/Login.cs` | User authentication |
-| ServerConnection.cs | `Assets/Scripts/Web/ServerConnection.cs` | Server URL configuration |
-| BPMNSecurityAnalyzer.cs | `Assets/Scripts/BPMNSecurityAnalyzer.cs` | Claude API integration |
-| LoadElements.cs | `Assets/Scripts/LoadElements.cs` | BPMN rendering |
-| DrawElements.cs | `Assets/Scripts/DrawElements.cs` | 3D element drawing |
+**File:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/GPTManager.cs` (369 lines)
 
-### FastAPI Backend
+**Public Methods:**
+- `SendMessageToGPT(string userMessage)` - Entry point for all user interactions
 
-| File | Path | Purpose |
-|------|------|---------|
-| app.py | `src/bpmn_assistant/app.py` | Main FastAPI application |
-| llm_facade.py | `src/bpmn_assistant/core/llm_facade.py` | LLM abstraction layer |
-| bpmn_modeling_service.py | `src/bpmn_assistant/services/bpmn_modeling_service.py` | BPMN creation/editing |
-| anthropic_provider.py | `src/bpmn_assistant/core/provider_impl/anthropic_provider.py` | Claude integration |
-| litellm_provider.py | `src/bpmn_assistant/core/provider_impl/litellm_provider.py` | Multi-LLM support |
-| utils.py | `src/bpmn_assistant/utils/utils.py` | Utility functions |
-| ontology_template.xml | `ontology_template.xml` | Security ontology |
+**Private Methods:**
+- `DetermineIntent(string userMessage)` - Intent classification via LLM
+- `RouteByIntent(string intent, string message)` - Routes to appropriate handler
+- `SendToModify(string userPrompt)` - BPMN creation/editing
+- `SendToTalk(string userPrompt)` - Conversational responses
+- `SendToSuggestSecurity()` - Security analysis
+- `ConvertSecuritySuggestionsToXml(List<object> suggestions)` - XML conversion
 
-### Configuration
+### A.2 loadLLMDiagram.cs Key Methods
 
-| File | Path | Purpose |
-|------|------|---------|
-| pyproject.toml | `pyproject.toml` | Python dependencies |
-| docker-compose.yml | `docker-compose.yml` | Docker orchestration |
-| Dockerfile | `Dockerfile` | Container definition |
-| .env.example | `.env.example` | Environment template |
+**File:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/loadLLMDiagram.cs` (1000 lines)
 
----
+**Public Methods:**
+- `InitializeDiagram()` - Main rendering entry point
 
-## Appendix B: API Endpoint Reference
+**Private Methods:**
+- `AdjustGatewayArrowPositions(XmlDocument xmlDoc)` - Arrow layout optimization
+- `NormalizeElementType(string rawType)` - Type name mapping
+- `GetPrefabPath(string elementType)` - Prefab path resolution
+- `IsStaticElement(string elementId)` - Static element filtering
 
-### IONOS PHP Endpoints
+### A.3 loadBPMNDiagram.cs Key Methods
 
-| Endpoint | Method | Parameters | Response |
-|----------|--------|------------|----------|
-| `/database/UserMechanics/login.php` | POST | myform_user, myform_pass | Username or empty |
-| `/database/UserMechanics/diagrams.php` | POST | username, company | `name^data^date^user~...` |
-| `/database/UserMechanics/securitydiagrams.php` | POST | username, company | `name^data^req^bpmn^date^user~...` |
-| `/database/UserMechanics/savediagrams.php` | POST | diagram, uID, diagramUI, company, username | Empty or error |
-| `/database/UserMechanics/updatediagrams.php` | POST | diagram, uID, diagramUI, company, username | Empty or error |
-| `/database/UserMechanics/savesecurity.php` | POST | diagram, uID, diagramUI, BPMNID, company, username, screenshot | Empty or error |
-| `/database/UserMechanics/updatesecurity.php` | POST | diagram, uID, diagramUI, company, username, screenshot | Empty or error |
-| `/database/UserMechanics/saverequirements.php` | POST | diagram, uID, diagramUI, username | Empty or error |
-| `/database/UserMechanics/deletebpmn.php` | POST | name, userID | Confirmation text |
-| `/database/UserMechanics/deletesecurityrequirements.php` | POST | name, userID | Confirmation text |
+**File:** `CyberD3signUnity/Assets/Scripts/BPMN Engine/loadBPMNDiagram.cs` (142 lines)
 
-### FastAPI Endpoints
+**Public Methods:**
+- `Start()` - Unity lifecycle initialization
 
-| Endpoint | Method | Request Body | Response |
-|----------|--------|--------------|----------|
-| `/bpmn_to_json` | POST | `{"bpmn_xml": str}` | JSON diagram structure |
-| `/available_providers` | GET | None | `{"openai": bool, "anthropic": bool, ...}` |
-| `/determine_intent` | POST | `{"message_history": [...], "model": str}` | `{"intent": str, "confidence": float}` |
-| `/modify` | POST | `{"message_history": [...], "process": dict, "model": str}` | `{"bpmn_xml": str, "bpmn_json": dict}` |
-| `/talk` | POST | `{"message_history": [...], "process": dict, "model": str}` | `{"message": str}` |
-| `/suggest_security` | POST | `{"modified_bpmn_xml": str, "model": str, "message_history": [...]}` | `{"explanation": str, "security_ontologies": [...]}` |
+**Processing Flow:**
+1. Load XML from DiagramHandler
+2. Parse BPMNShape elements
+3. Instantiate prefabs
+4. Parse BPMNEdge elements
+5. Create arrow connections
 
 ---
 
-## Appendix C: Data Model Schemas
+## Appendix B: API Documentation
 
-### BPMN Element JSON Schema
+### B.1 FastAPI Endpoints
 
+**POST /determine_intent**
+
+Request:
 ```json
 {
-  "type": "task",
-  "id": "task1",
-  "text": "User Login",
-  "x": 250,
-  "y": 150,
-  "width": 120,
-  "height": 80
+  "model": "gpt-4.1-nano",
+  "message_history": [
+    {"role": "user", "content": "Create a purchase order process"}
+  ],
+  "process": []
 }
 ```
 
-### Security Ontology Suggestion Schema
-
+Response:
 ```json
 {
-  "elementID": "task1",
-  "elementText": "User Login",
-  "ontology_path": [
-    "root/bpmnElement/accesscontrol/authentication/personal"
+  "intent": "create_process",
+  "confidence": 0.95
+}
+```
+
+**POST /modify**
+
+Request:
+```json
+{
+  "model": "gpt-4.1-nano",
+  "message_history": [
+    {"role": "user", "content": "Create a purchase order process"}
+  ],
+  "process": null
+}
+```
+
+Response:
+```json
+{
+  "bpmn_xml": "<?xml version=\"1.0\"?><root>...</root>",
+  "bpmn_json": "{...}"
+}
+```
+
+**POST /suggest_security**
+
+Request:
+```json
+{
+  "model": "gpt-4.1-nano",
+  "modified_bpmn_xml": "<root><BPMNShape>...</BPMNShape></root>",
+  "message_history": []
+}
+```
+
+Response:
+```json
+{
+  "explanation": "Payment processing requires encryption and authentication...",
+  "security_ontologies": [
+    {
+      "elementID": "task_payment",
+      "elementText": "Process Payment",
+      "ontology_path": [
+        "root/bpmnElement/privacy/confidentiality/encryption",
+        "root/bpmnElement/authentication/multi_factor_auth"
+      ]
+    }
   ]
 }
 ```
 
-### Security Requirements XML Schema
+### B.2 IONOS PHP Endpoints
 
-```xml
-<root>
-  <bpmnElement elementID="task1" elementText="User Login">
-    <accesscontrol>
-      <authentication>
-        <personal required="true"/>
-      </authentication>
-    </accesscontrol>
-    <privacy>
-      <confidentiality>
-        <encryption required="true"/>
-      </confidentiality>
-    </privacy>
-  </bpmnElement>
-</root>
+**POST /login.php**
+
+Request (Form Data):
 ```
+username=john
+password=secure123
+```
+
+Response:
+```json
+{
+  "success": true,
+  "userId": 123,
+  "username": "john"
+}
+```
+
+**GET /get_diagrams.php**
+
+Request:
+```
+?user_id=123&page=0
+```
+
+Response:
+```json
+{
+  "success": true,
+  "diagrams": [
+    {
+      "id": 1,
+      "diagram_name": "Purchase Order Process",
+      "created_at": "2025-10-15 14:30:00",
+      "updated_at": "2025-10-16 09:15:00"
+    }
+  ],
+  "page": 0
+}
+```
+
+---
+
+## Appendix C: Security Ontology Reference
+
+### C.1 Complete Ontology Tree
+
+```
+root/bpmnElement/
+│
+├── privacy/
+│   ├── confidentiality/
+│   │   ├── encryption
+│   │   ├── access_control
+│   │   ├── data_masking
+│   │   └── secure_communication
+│   ├── anonymization/
+│   │   ├── data_anonymization
+│   │   └── pseudonymization
+│   └── consent_management/
+│       ├── user_consent
+│       └── consent_tracking
+│
+├── integrity/
+│   ├── data_validation/
+│   │   ├── input_validation
+│   │   └── schema_validation
+│   ├── checksums/
+│   ├── digital_signatures/
+│   └── version_control/
+│
+├── availability/
+│   ├── redundancy/
+│   │   ├── server_redundancy
+│   │   └── data_redundancy
+│   ├── backup/
+│   │   ├── regular_backup
+│   │   └── offsite_backup
+│   ├── load_balancing/
+│   └── disaster_recovery/
+│
+├── authentication/
+│   ├── multi_factor_auth/
+│   │   ├── two_factor
+│   │   └── biometric
+│   ├── biometrics/
+│   ├── password_policies/
+│   │   ├── complexity_requirements
+│   │   └── rotation_policy
+│   └── session_management/
+│       ├── timeout
+│       └── secure_cookies
+│
+├── authorization/
+│   ├── role_based_access/
+│   │   ├── rbac
+│   │   └── abac
+│   ├── permission_models/
+│   ├── least_privilege/
+│   └── segregation_of_duties/
+│
+└── non_repudiation/
+    ├── audit_logs/
+    │   ├── access_logs
+    │   └── transaction_logs
+    ├── digital_signatures/
+    ├── timestamps/
+    └── transaction_logging/
+```
+
+### C.2 Ontology Mapping Examples
+
+**Task: "Process Payment"**
+
+Suggested Security Mappings:
+- `root/bpmnElement/privacy/confidentiality/encryption` - Encrypt payment data
+- `root/bpmnElement/authentication/multi_factor_auth` - Require MFA for high-value transactions
+- `root/bpmnElement/integrity/digital_signatures` - Sign transaction records
+- `root/bpmnElement/non_repudiation/audit_logs` - Log all payment attempts
+
+**Task: "Access Customer Records"**
+
+Suggested Security Mappings:
+- `root/bpmnElement/authorization/role_based_access` - Restrict to authorized personnel
+- `root/bpmnElement/privacy/confidentiality/access_control` - Implement access controls
+- `root/bpmnElement/non_repudiation/audit_logs/access_logs` - Log all record accesses
+- `root/bpmnElement/authentication/session_management` - Secure session handling
+
+---
+
+## Appendix D: Design Pattern Catalog
+
+### D.1 Facade Pattern
+
+**Implementation:** `llm_facade.py`
+
+**Purpose:** Provide unified interface to multiple LLM providers
+
+**Benefits:**
+- Single point of integration for client code
+- Easy to add new providers
+- Provider-specific logic encapsulated
+
+### D.2 Singleton Pattern
+
+**Implementation:** `DiagramHandler.cs` (static variables)
+
+**Purpose:** Global state management for diagram data
+
+**Benefits:**
+- Single source of truth
+- Accessible from any component
+- No need to pass references
+
+### D.3 Factory Pattern
+
+**Implementation:** Prefab instantiation in loadBPMNDiagram and loadLLMDiagram
+
+**Purpose:** Dynamic GameObject creation based on element type
+
+**Benefits:**
+- Centralized object creation logic
+- Easy to add new element types
+- Type-safe instantiation
+
+### D.4 Repository Pattern
+
+**Implementation:** SaveHandler and DiagramHandler
+
+**Purpose:** Abstract data persistence and retrieval
+
+**Benefits:**
+- Separation of data access from business logic
+- Easy to swap storage backends
+- Consistent interface for CRUD operations
+
+---
+
+## Appendix E: Glossary
+
+**BPMN** - Business Process Model and Notation, a standard for business process diagrams
+
+**Coroutine** - Unity's mechanism for asynchronous operations using yield statements
+
+**DiagramHandler** - Static class managing global diagram state
+
+**FastAPI** - Modern Python web framework for building APIs
+
+**Gateway** - BPMN decision point with multiple outgoing paths
+
+**GPTManager** - Component orchestrating LLM interactions
+
+**IONOS** - Web hosting provider for PHP backend
+
+**loadBPMNDiagram** - Component for rendering user-created diagrams
+
+**loadLLMDiagram** - Component for rendering AI-generated diagrams with scaling
+
+**LLM** - Large Language Model (GPT, Claude, Gemini)
+
+**Ontology** - Structured framework for categorizing security requirements
+
+**Prefab** - Unity template for GameObject instantiation
+
+**Scale Factor** - 0.26 multiplier applied to LLM-generated coordinates
+
+**UnityWebRequest** - Unity's HTTP client for REST API calls
+
+**XML** - Extensible Markup Language used for BPMN storage
 
 ---
 
 ## Document Conclusion
 
-This technical architecture report provides a comprehensive analysis of the CyberD3sign application, covering all aspects from frontend Unity components to backend FastAPI services, LLM integrations, and database persistence. The system demonstrates a well-architected separation of concerns with clear data flow patterns and robust integration between multiple technology stacks.
+This comprehensive technical architecture report documents the complete CyberD3sign application, including the previously missing components:
 
-**Key Architectural Strengths:**
-1. Modular LLM provider abstraction enabling multi-vendor support
-2. Clear separation between IONOS legacy backend and modern FastAPI AI services
-3. Comprehensive security ontology framework
-4. Stateless API design with client-side session management
-5. Docker-based deployment for easy scaling
+1. **GPTManager.cs** - AI orchestration layer with intent detection, multi-endpoint routing, and security suggestion processing
+2. **loadLLMDiagram.cs** - Specialized rendering for AI-generated diagrams with automatic scaling and layout optimization
+3. **loadBPMNDiagram.cs** - Standard BPMN diagram loading and rendering
 
-**Potential Improvements:**
-1. Add authentication/authorization to FastAPI endpoints
-2. Implement caching for LLM responses to reduce API costs
-3. Add WebSocket support for real-time collaborative editing
-4. Migrate IONOS PHP backend to modern REST API
-5. Implement database connection pooling for better performance
+The application represents a sophisticated integration of:
+- **Unity 3D** for visualization
+- **AI/LLM** for natural language processing
+- **FastAPI** for intelligent backend services
+- **PHP/MySQL** for data persistence
+- **Multi-tier architecture** for scalability
 
-For questions or clarifications about specific components, refer to the file locations in Appendix A or consult the inline code documentation.
+**Key Technical Achievements:**
+- Intent-based conversational interface
+- Multi-provider LLM abstraction
+- Automatic diagram scaling (0.26x factor)
+- Six-category security ontology framework
+- Real-time security analysis and visualization
+- Hybrid architecture with dual backends
 
----
-
-**End of Report**
+**Version:** 2.0 - Complete
+**Date:** October 16, 2025
+**Status:** Final with Full Component Coverage
